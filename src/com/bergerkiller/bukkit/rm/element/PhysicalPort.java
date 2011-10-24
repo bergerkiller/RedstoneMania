@@ -8,7 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.NoteBlock;
-import org.bukkit.material.PistonBaseMaterial;
 
 import com.bergerkiller.bukkit.rm.Position;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
@@ -214,6 +213,10 @@ public class PhysicalPort {
 		        	Util.setPiston(b, down);
 		        }
 			}
+		}
+		if (!down) {
+			//power change?
+			this.updateLeverPower();
 		}
 	}
 	

@@ -10,6 +10,7 @@ import com.bergerkiller.bukkit.rm.element.Redstone;
 public class CircuitInstance extends CircuitBase {
 	
 	public Circuit source;
+	public boolean isMain = false;
 	
 	public CircuitInstance(Circuit source, String name) {
 		this.source = source;

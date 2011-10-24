@@ -129,7 +129,7 @@ public class RedstoneMania extends JavaPlugin {
 						sender.sendMessage("Please enter a circuit name to delete too!");
 					}
 				} else if (cmdLabel.equals("list")) {
-					Util.listElements(player, " | ", Circuit.getNames());
+					Util.listElements(player, "", " | ", 70, (Object[]) Circuit.getNames());
 				} else if (cmdLabel.equals("save")) {
 					if (args.length > 0) {
 						if (sel.portnames.size() > 0) {

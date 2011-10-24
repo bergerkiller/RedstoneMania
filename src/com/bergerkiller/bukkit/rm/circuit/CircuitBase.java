@@ -12,8 +12,11 @@ import java.util.HashMap;
 import java.util.logging.Level;
 
 import com.bergerkiller.bukkit.rm.RedstoneMania;
+import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.rm.element.Inverter;
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
+import com.bergerkiller.bukkit.rm.element.Repeater;
 
 public class CircuitBase {
 		
@@ -27,8 +30,15 @@ public class CircuitBase {
 		for (Redstone r : this.elements) {
 			r.updateTick();
 		}
+		for (CircuitInstance ci : this.subcircuits) {
+			ci.doPhysics();
+		}
 	}
+	
 	public void initialize() {
+		this.initialize(true);
+	}
+	private void initialize(boolean generateIds) {
 		this.ports.clear();
 		for (Redstone r : this.elements) {
 			r.setCircuit(this);
@@ -38,9 +48,11 @@ public class CircuitBase {
 			}
 		}
 		for (CircuitBase c : this.subcircuits) {
-			c.initialize();
+			c.initialize(false);
 		}
-		this.generateIds(0);
+		if (generateIds) {
+			this.generateIds(0);
+		}
 		this.initialized = true;
 	}
 	public boolean isInitialized() {
@@ -68,6 +80,43 @@ public class CircuitBase {
 	}
 	public Redstone getElement(Redstone guide) {
 		return this.getElement(guide.getId());
+	}
+	public void removeElement(Redstone element) {
+		for (int i = 0; i < this.elements.length; i++) {
+			if (this.elements[i] == element) {
+				this.removeElement(i);
+				return;
+			}
+		}
+	}
+	private void removeElement(int index) {
+		Redstone[] newElements = new Redstone[this.elements.length - 1];
+		for (int i = 0; i < index; i++) {
+			newElements[i] = this.elements[i];
+		}
+		for (int i = index; i < newElements.length; i++) {
+			newElements[i] = this.elements[i + 1];
+		}
+		this.elements = newElements;
+	}
+	
+	public void log() {
+		this.log(0);
+	}
+	public void log(int indent) {
+		RedstoneMania.log(Level.INFO, Util.getIndent(indent) + "Logging circuit: " + this.getFullName());
+		for (Redstone r : this.elements) {
+			RedstoneMania.log(Level.INFO, r.toString()); 
+			if (r.inputs.size() > 0) {
+				Util.logElements(Util.getIndent(indent + 1) + "Receives input from: ", " | ", 150, r.inputs.toArray(new Object[0]));
+			}
+			if (r.outputs.size() > 0) {
+				Util.logElements(Util.getIndent(indent + 1) + "Supplies output for: ", " | ", 150, r.outputs.toArray(new Object[0]));
+			}
+		}
+		for (CircuitBase cb : this.subcircuits) {
+			cb.log(indent + 1);
+		}
 	}
 	
 	private int generateIds(int startindex) {

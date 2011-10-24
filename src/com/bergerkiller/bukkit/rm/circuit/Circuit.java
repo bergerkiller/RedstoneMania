@@ -3,11 +3,17 @@ package com.bergerkiller.bukkit.rm.circuit;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.logging.Level;
 
+import com.bergerkiller.bukkit.rm.GroupedMap;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
+import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
 public class Circuit extends CircuitBase {
@@ -116,7 +122,7 @@ public class Circuit extends CircuitBase {
 	public Collection<CircuitInstance> getInstances() {
 		return this.instances.values();
 	}
-	public CircuitInstance createInstance() {
+	private CircuitInstance createInstance(boolean main) {
 		CircuitInstance c = new CircuitInstance(this, "");
 		//Set dependencies
 		c.subcircuits = new CircuitInstance[this.subcircuits.length];
@@ -131,11 +137,12 @@ public class Circuit extends CircuitBase {
 		//Perform some ID generation to match the element ID's
 		c.initialize();
 		//Link the elements
+		GroupedMap<Redstone> map = new GroupedMap<Redstone>();
 		for (int i = 0; i < c.elements.length; i++) {
 			Redstone from = this.elements[i];
 			Redstone to = c.elements[i];
 			if (from.getId() != to.getId()) {
-				RedstoneMania.log(Level.SEVERE, "Failed to make a new instance: ID out of sync!");
+				RedstoneMania.log(Level.SEVERE, "Failed to make a new instance of '" + this.name + "': ID out of sync!");
 				return null;
 			} else {
 				for (Redstone input : from.inputs) {
@@ -143,6 +150,8 @@ public class Circuit extends CircuitBase {
 					if (element == null) {
 						RedstoneMania.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': input element ID mismatch!");
 						return null;
+					} else if (from.getDelay() == 0 && input.getDelay() == 0 && from.outputs.remove(input)) {
+						map.add(element, to);
 					} else {
 						element.connectTo(to);
 					}
@@ -158,12 +167,45 @@ public class Circuit extends CircuitBase {
 				}
 			}
 		}
+		//Grouped connections
+		for (HashSet<Redstone> group : map.values()) {
+			//Get a list of inputs and outputs in this group
+			HashSet<Redstone> inputs = new HashSet<Redstone>();
+			HashSet<Redstone> outputs = new HashSet<Redstone>();
+			for (Redstone r : group) {
+				inputs.addAll(r.inputs);
+				outputs.addAll(r.outputs);
+			}
+			for (Redstone r: group) {
+				for (Redstone input : inputs) {
+					r.connectTo(input);
+				}
+				for (Redstone output : outputs) {
+					output.connectTo(r);
+				}
+			}
+			
+			
+			
+//			//get the element that has highest priority
+//			Redstone from = null;
+//			for (Redstone r : group) {
+//				if (r.getCircuit() == c || from == null) {
+//					from = r;
+//				}
+//			}
+//			from.mergeAdd(group.toArray(new Redstone[0]));
+		}
+		c.log();
 		return c;
+	}
+	public CircuitInstance createInstance() {
+		return this.createInstance(false);
 	}
 	public CircuitInstance createInstance(String name) {
 		CircuitInstance c = this.getInstance(name);
 		if (c == null) {
-			c = this.createInstance();
+			c = this.createInstance(true);
 			c.name = name;
 			this.instances.put(name,  c);
 		}
@@ -182,7 +224,7 @@ public class Circuit extends CircuitBase {
 			if (c == null) {
 				throw new Exception("Circuit dependency not found: " + cname);
 			} else {
-				c.subcircuits[i] = this.createInstance();
+				this.subcircuits[i] = c.createInstance();
 			}
 		}
 		//Read the circuit data

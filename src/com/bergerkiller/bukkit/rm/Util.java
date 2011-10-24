@@ -2,10 +2,13 @@ package com.bergerkiller.bukkit.rm;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.logging.Level;
 
 import net.minecraft.server.BlockPiston;
 import net.minecraft.server.World;
 
+import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.CraftWorld;
 
 import org.bukkit.Bukkit;
@@ -111,6 +114,19 @@ public class Util {
     public static boolean isDiode(Material material) {
     	return material == Material.DIODE_BLOCK_OFF || material == Material.DIODE_BLOCK_ON;
     }
+    public static boolean canDistractWire(Material type) {
+		switch (type) {
+		case REDSTONE_WIRE : return true;
+		case REDSTONE_TORCH_ON : return true;
+		case REDSTONE_TORCH_OFF : return true;
+		case LEVER : return true;
+		case WOOD_PLATE : return true;
+		case STONE_PLATE : return true;
+		case STONE_BUTTON : return true;
+		case DETECTOR_RAIL : return true;
+		}
+		return false;
+    }
     
     public static String[] remove(String[] input, int index) {
     	String[] rval = new String[input.length - 1];
@@ -176,7 +192,6 @@ public class Util {
     	}
     	return false;
     }
-    private final byte d = 0x7;
     public static byte combine(boolean... bools) {
     	if (bools.length > 8) {
     		return 0;
@@ -196,19 +211,38 @@ public class Util {
     	return (value & (1<<n)) != 0;
     }
     
-    public static void listElements(Player player, String delimiter, String... elements) {
-		String msgpart = "";
-		for (String element : elements) {
+    public static String getIndent(int n) {
+    	String rval = "";
+    	for (int i = 0; i < n; i++) rval += "    ";
+    	return rval;
+    }
+    
+    public static void logElements(String prestring, String delimiter, int maxlinelength, Object... elements) {
+    	for (String line : listElements(prestring, delimiter, maxlinelength, elements)) {
+    		RedstoneMania.log(Level.INFO, line);
+    	}
+    }
+    public static void listElements(CommandSender player, String prestring, String delimiter, int maxlinelength, Object... elements) {
+    	for (String line : listElements(prestring, delimiter, maxlinelength, elements)) {
+    		player.sendMessage(line);
+    	}
+    }
+    public static String[] listElements(String prestring, String delimiter, int maxlinelength, Object... elements) {
+    	ArrayList<String> rval = new ArrayList<String>();
+		String msgpart = prestring;
+		for (Object element : elements) {
 			//display it
-			if (msgpart.length() + element.length() < 70) {
-				if (msgpart != "") msgpart += ChatColor.WHITE + delimiter;
+			String name = element.toString();
+			if (msgpart.length() + name.length() < maxlinelength) {
+				if (msgpart.length() != prestring.length()) msgpart += ChatColor.WHITE + delimiter;
 				msgpart += element;
 			} else {
-				player.sendMessage(msgpart);
-				msgpart = element;
+				rval.add(msgpart);
+				msgpart = name;
 			}
 		}
 		//possibly forgot one?
-		if (msgpart != "") player.sendMessage(msgpart);
+		rval.add(msgpart);
+		return rval.toArray(new String[0]);
     }
 }

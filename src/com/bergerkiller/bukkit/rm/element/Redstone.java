@@ -1,5 +1,6 @@
 package com.bergerkiller.bukkit.rm.element;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.io.DataInputStream;
@@ -7,7 +8,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import com.bergerkiller.bukkit.rm.RedstoneMania;
+import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitBase;
+import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 
 public class Redstone {
 	
@@ -21,12 +25,7 @@ public class Redstone {
 				this.setPowered(pulse || this.inputpower, false);
 			}
 		}
-		this.resetBurnout();
-	}
-	
-	private void resetBurnout() {
-		//alter the maximum allowed updates/tick here
-		this.burnoutCounter = 3;
+		this.burnoutCounter = burnoutValue;
 	}
 	
 	private boolean powered = false;
@@ -36,7 +35,14 @@ public class Redstone {
 	private CircuitBase circuit;
 	public HashSet<Redstone> inputs = new HashSet<Redstone>();
 	public HashSet<Redstone> outputs = new HashSet<Redstone>();
-	private int burnoutCounter = 3;
+	private final int burnoutValue = 5; //Sets the maximum allowed updates/tick
+	private int burnoutCounter = burnoutValue;
+	private short x, z;
+	
+	public void setPosition(int x, int z) {
+		this.x = (short) x;
+		this.z = (short) z;
+	}
 	
 	public void setCircuit(CircuitBase circuit) {
 		this.circuit = circuit;
@@ -45,25 +51,21 @@ public class Redstone {
 		return this.circuit;
 	}
 	
-	private boolean hasInput(HashSet<Redstone> ignore) {
-		if (this.delay == 0) ignore.add(this);
-		for (Redstone input : this.inputs) {
-			if (!ignore.contains(input)) {
-				if (this.outputs.contains(input)) {
-					//direct connection - check this element
-					if (input.hasInput(ignore)) {
-						return true;
-					}
-				} else if (input.hasPower()) {
-					return true;
-				}
+	public final void update() {
+		//we don't have to update inactive elements!
+		if (this.inputs.size() == 0 && this.outputs.size() == 0) {
+			if (this.getType() != 3) {
+				return;
 			}
 		}
-		return false;
-	}
-	public final void update() {
 		//check if the opposite is the new result
-		boolean hasinput = this.hasInput(new HashSet<Redstone>());
+		boolean hasinput = false;
+		for (Redstone input : this.inputs) {
+			if (input.hasPower())  {
+				hasinput = true;
+				break;
+			}
+		}
 		if (this.inputpower && !hasinput) {
 			inputpower = false;
 			this.setPowered(false, true);
@@ -78,13 +80,14 @@ public class Redstone {
 		this.inputpower = powered;
 	}
 	private void setPowered(boolean powered, boolean usedelay) {
-		if (usedelay && this.delay > 0) {
+		int delay = this.getDelay();
+		if (usedelay && delay > 0) {
 			if (powered) {
 				this.pulse = true;
-				this.setdelay = this.delay;
+				this.setdelay = delay;
 			} else if (this.setdelay == 0) {
 				this.pulse = false;
-				this.setdelay = this.delay;
+				this.setdelay = delay;
 			}
 		} else if (this.burnoutCounter == 0) {
 			return;
@@ -96,7 +99,7 @@ public class Redstone {
 			}
 			if (this.inputpower != powered) {
 				this.pulse = false;
-				this.setdelay = this.delay;
+				this.setdelay = delay;
 			}
 		}
 	}
@@ -107,6 +110,19 @@ public class Redstone {
 		}
 	}
 	
+	public String toString() {
+		String cname = "unknown";
+		if (this.circuit != null) cname = this.circuit.getFullName();
+		if (this instanceof Inverter) {
+			return cname + "[Inverter " + this.id + "]";
+		} else if (this instanceof Repeater) {
+			return cname + "[Repeater " + this.id + "]";
+		} else if (this instanceof Port) {
+			return cname + "[Port '" + ((Port) this).name + "' " + this.id + "]";
+		} else {
+			return cname + "[Wire " + this.id + "]";
+		}
+	}
 	public final boolean isPowered() {
 		return this.powered;
 	}
@@ -115,6 +131,9 @@ public class Redstone {
 	}
 	public void setDelay(int delay) {
 		this.delay = delay;
+	}
+	public int getDelay() {
+		return this.delay;
 	}
 	
 	public final int getId() {
@@ -151,6 +170,41 @@ public class Redstone {
 		return r;
 	}
 	
+	/**
+	 * Merges all elements into this redstone element.
+	 * Inputs and outputs of the elements get cleared.
+	 * @param elements
+	 */
+	public final void transferConnections(Redstone... elements) {
+		for (Redstone r : elements) {
+			if (r == this) continue;
+			for (Redstone input : r.inputs) {
+				input.outputs.remove(r);
+				if (this != input) {
+					input.outputs.add(this);
+					this.inputs.add(input);
+				}
+			}
+			for (Redstone output : r.outputs) {
+				output.inputs.remove(r);
+				if (this != output) {
+					output.inputs.add(this);
+					this.outputs.add(output);
+				}
+			}
+		}
+	}
+	
+	public final void transfer(Redstone to) {
+		to.transferConnections(this);
+		this.inputs.clear();
+		this.outputs.clear();
+	}
+	
+	public final void connect(Redstone redstone) {
+		this.connectTo(redstone);
+		redstone.connectTo(this);
+	}
 	public final void connectTo(Redstone redstone) {
 		if (redstone == this) return;
 		this.outputs.add(redstone);
@@ -198,6 +252,8 @@ public class Redstone {
 	public void saveTo(DataOutputStream stream) throws IOException {
 		stream.write(this.getType());
 		//init
+		stream.writeShort(this.x);
+		stream.writeShort(this.z);
 	    stream.writeBoolean(this.powered);
 	    stream.writeInt(this.delay);
 	    if (this instanceof Port) {
@@ -220,6 +276,8 @@ public class Redstone {
 			RedstoneMania.log(Level.SEVERE, "Unknown redstone type: " + type);
 		}
 		//init
+		rval.x = stream.readShort();
+		rval.z = stream.readShort();
 		rval.powered = stream.readBoolean();
 		rval.delay = stream.readInt();
 		if (rval instanceof Port) {
