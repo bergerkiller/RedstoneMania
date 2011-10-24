@@ -1,6 +1,5 @@
 package com.bergerkiller.bukkit.rm.element;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.io.DataInputStream;
@@ -8,21 +7,17 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import com.bergerkiller.bukkit.rm.RedstoneMania;
-import com.bergerkiller.bukkit.rm.Util;
-import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitBase;
-import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 
 public class Redstone {
 	
-	//public ArrayList<Update> updates = new ArrayList<Update>();
 	private int setdelay = 0;
-	private boolean pulse = false;
-		
+	private boolean setpowered = false;
+
 	public void updateTick() {
 		if (setdelay > 0) {
 			if (--setdelay == 0) {
-				this.setPowered(pulse || this.inputpower, false);
+				this.setPowered(this.setpowered, false);
 			}
 		}
 		this.burnoutCounter = burnoutValue;
@@ -51,11 +46,15 @@ public class Redstone {
 		return this.circuit;
 	}
 	
-	public final void update() {
+	/**
+	 * Updates the outputs using the inputs, returns if this element changed
+	 * @return
+	 */
+	public final boolean update() {
 		//we don't have to update inactive elements!
-		if (this.inputs.size() == 0 && this.outputs.size() == 0) {
+		if (this.isDisabled()) {
 			if (this.getType() != 3) {
-				return;
+				return false;
 			}
 		}
 		//check if the opposite is the new result
@@ -72,7 +71,10 @@ public class Redstone {
 		} else if (!this.inputpower && hasinput) {
             this.inputpower = true;
 			this.setPowered(true, true);
+		} else {
+			return false;
 		}
+		return true;
 	}
 		
 	public final void setPowered(boolean powered) {
@@ -82,24 +84,23 @@ public class Redstone {
 	private void setPowered(boolean powered, boolean usedelay) {
 		int delay = this.getDelay();
 		if (usedelay && delay > 0) {
-			if (powered) {
-				this.pulse = true;
-				this.setdelay = delay;
-			} else if (this.setdelay == 0) {
-				this.pulse = false;
+			if (this.setdelay == 0) {
+				this.setpowered = powered;
 				this.setdelay = delay;
 			}
-		} else if (this.burnoutCounter == 0) {
-			return;
-		} else {
+		} else if (this.burnoutCounter > 0) {
 			--this.burnoutCounter;
-			if (this.powered != powered) {
-				this.powered = powered;
+			if (powered) {
+				if (!this.powered) {
+					this.powered = true;
+					this.onPowerChange();
+				}
+				if (!this.inputpower) {
+					this.setPowered(false, true);
+				}
+			} else if (!this.inputpower && this.powered) {
+				this.powered = false;
 				this.onPowerChange();
-			}
-			if (this.inputpower != powered) {
-				this.pulse = false;
-				this.setdelay = delay;
 			}
 		}
 	}
@@ -111,16 +112,14 @@ public class Redstone {
 	}
 	
 	public String toString() {
-		String cname = "unknown";
-		if (this.circuit != null) cname = this.circuit.getFullName();
 		if (this instanceof Inverter) {
-			return cname + "[Inverter " + this.id + "]";
+			return "[Inverter " + this.id + "]";
 		} else if (this instanceof Repeater) {
-			return cname + "[Repeater " + this.id + "]";
+			return "[Repeater " + this.id + "]";
 		} else if (this instanceof Port) {
-			return cname + "[Port '" + ((Port) this).name + "' " + this.id + "]";
+			return "[Port '" + ((Port) this).name + "' " + this.id + "]";
 		} else {
-			return cname + "[Wire " + this.id + "]";
+			return "[Wire " + this.id + "]";
 		}
 	}
 	public final boolean isPowered() {
@@ -134,6 +133,13 @@ public class Redstone {
 	}
 	public int getDelay() {
 		return this.delay;
+	}
+	
+	public final short getX() {
+		return this.x;
+	}
+	public final short getZ() {
+		return this.z;
 	}
 	
 	public final int getId() {
@@ -152,6 +158,13 @@ public class Redstone {
 		return 0;
 	}
 	
+	public void setData(Redstone source) {
+		this.id = source.id;
+		this.delay = source.delay;
+		this.powered = source.powered;
+		this.setdelay = source.setdelay;
+		this.setpowered = source.setpowered;
+	}
 	public Redstone clone() {
 		Redstone r;
 		if (this instanceof Inverter) {
@@ -164,43 +177,60 @@ public class Redstone {
 		} else {
 			r = new Redstone();
 		}
-		r.id = this.id;
-		r.delay = this.delay;
-		r.powered = this.powered;
+		r.setData(this);
 		return r;
 	}
 	
-	/**
-	 * Merges all elements into this redstone element.
-	 * Inputs and outputs of the elements get cleared.
-	 * @param elements
-	 */
-	public final void transferConnections(Redstone... elements) {
-		for (Redstone r : elements) {
-			if (r == this) continue;
-			for (Redstone input : r.inputs) {
-				input.outputs.remove(r);
-				if (this != input) {
-					input.outputs.add(this);
-					this.inputs.add(input);
-				}
-			}
-			for (Redstone output : r.outputs) {
-				output.inputs.remove(r);
-				if (this != output) {
-					output.inputs.add(this);
-					this.outputs.add(output);
-				}
+	public final void transfer(Redstone to) {
+		for (Redstone input : this.inputs) {
+			input.outputs.remove(this);
+			if (to != input) {
+				input.outputs.add(to);
+				to.inputs.add(input);
 			}
 		}
-	}
-	
-	public final void transfer(Redstone to) {
-		to.transferConnections(this);
+		for (Redstone output : this.outputs) {
+			output.inputs.remove(this);
+			if (to != output) {
+				output.inputs.add(to);
+				to.outputs.add(output);
+			}
+		}
 		this.inputs.clear();
 		this.outputs.clear();
 	}
 	
+	/**
+	 * Disables this element: inputs are instantly redirected to the outputs
+	 * Result: this element has no role. All inputs and outputs are cleared
+	 */
+	public final void disable() {
+		for (Redstone input : this.inputs) {
+			input.outputs.remove(this);
+			for (Redstone output : this.outputs) {
+				input.connectTo(output);
+			}
+		}
+		for (Redstone output : this.outputs) {
+			output.inputs.remove(this);
+			for (Redstone input : this.inputs) {
+				input.connectTo(output);
+			}
+		}
+		this.inputs.clear();
+		this.outputs.clear();
+	}
+	
+	public final Redstone findDirectConnection() {
+		if (this.getDelay() == 0 && this.inputs.size() > 0 && this.outputs.size() > 0) {
+			for (Redstone input : this.inputs) {
+				if (input.getDelay() == 0 && this.outputs.contains(input)) {
+					return input;
+				}
+			}
+		}
+		return null;
+	}
 	public final void connect(Redstone redstone) {
 		this.connectTo(redstone);
 		redstone.connectTo(this);
@@ -227,15 +257,21 @@ public class Redstone {
 		this.outputs.clear();
 	}
 	public final boolean isConnectedTo(Redstone redstone) {
-		return this.outputs.contains(redstone) && redstone.inputs.contains(this);
+		return this.outputs.contains(redstone);
 	}
-
+	public final boolean isConnected(Redstone redstone) {
+		return this.isConnectedTo(redstone) && redstone.isConnectedTo(this);
+	}
+	public final boolean isDisabled() {
+		return this.inputs.size() == 0 && this.outputs.size() == 0;
+	}
+	
 	public void loadInstance(DataInputStream stream) throws IOException {
 		this.powered = stream.readBoolean();
 		if (this.delay > 0) {
 			this.setdelay = stream.readInt();
 			if (this.setdelay > 0) {
-				this.pulse = stream.readBoolean();
+				this.setpowered = stream.readBoolean();
 			}
 		}
 	}
@@ -244,7 +280,7 @@ public class Redstone {
 		if (this.delay > 0) {
 			stream.writeInt(this.setdelay);
             if (this.setdelay > 0) {
-            	stream.writeBoolean(this.pulse);
+            	stream.writeBoolean(this.setpowered);
             }
 		}
 	}

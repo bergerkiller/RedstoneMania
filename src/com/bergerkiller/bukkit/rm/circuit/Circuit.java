@@ -3,16 +3,12 @@ package com.bergerkiller.bukkit.rm.circuit;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.logging.Level;
 
-import com.bergerkiller.bukkit.rm.GroupedMap;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
-import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.rm.element.PhysicalPort;
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
@@ -85,11 +81,18 @@ public class Circuit extends CircuitBase {
 				for (String name : c.getInstanceFolder().list()) {
 					if (name.toLowerCase().endsWith(".instance")) {
 						name = name.substring(0, name.length() - 9);
-						c.createInstance(name).load();
+						CircuitInstance ci = c.createInstance(name);
+						ci.load();
+						ci.update();
+						ci.updateAlive();
 					}
 				}
 			}
 		}
+	}
+	public static void clearAll() {
+		circuits.clear();
+		PhysicalPort.clearAll();
 	}
 	
 	public static File getCircuitsFolder() {
@@ -137,7 +140,6 @@ public class Circuit extends CircuitBase {
 		//Perform some ID generation to match the element ID's
 		c.initialize();
 		//Link the elements
-		GroupedMap<Redstone> map = new GroupedMap<Redstone>();
 		for (int i = 0; i < c.elements.length; i++) {
 			Redstone from = this.elements[i];
 			Redstone to = c.elements[i];
@@ -150,8 +152,6 @@ public class Circuit extends CircuitBase {
 					if (element == null) {
 						RedstoneMania.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': input element ID mismatch!");
 						return null;
-					} else if (from.getDelay() == 0 && input.getDelay() == 0 && from.outputs.remove(input)) {
-						map.add(element, to);
 					} else {
 						element.connectTo(to);
 					}
@@ -167,36 +167,8 @@ public class Circuit extends CircuitBase {
 				}
 			}
 		}
-		//Grouped connections
-		for (HashSet<Redstone> group : map.values()) {
-			//Get a list of inputs and outputs in this group
-			HashSet<Redstone> inputs = new HashSet<Redstone>();
-			HashSet<Redstone> outputs = new HashSet<Redstone>();
-			for (Redstone r : group) {
-				inputs.addAll(r.inputs);
-				outputs.addAll(r.outputs);
-			}
-			for (Redstone r: group) {
-				for (Redstone input : inputs) {
-					r.connectTo(input);
-				}
-				for (Redstone output : outputs) {
-					output.connectTo(r);
-				}
-			}
-			
-			
-			
-//			//get the element that has highest priority
-//			Redstone from = null;
-//			for (Redstone r : group) {
-//				if (r.getCircuit() == c || from == null) {
-//					from = r;
-//				}
-//			}
-//			from.mergeAdd(group.toArray(new Redstone[0]));
-		}
-		c.log();
+		//Fix direct connections
+		c.fixDirectConnections();
 		return c;
 	}
 	public CircuitInstance createInstance() {
@@ -212,7 +184,17 @@ public class Circuit extends CircuitBase {
 		return c;
 	}
 	public CircuitInstance removeInstance(String name) {
-		return this.instances.remove(name);
+		CircuitInstance ci = this.instances.remove(name);
+		if (ci != null) {
+			for (Port p : ci.getPorts()) {
+				for (PhysicalPort pp : p.locations) {
+					PhysicalPort.remove(pp);
+				}
+			}
+		}
+		File sourcefile = ci.getFile();
+		if (sourcefile.exists()) sourcefile.delete();
+		return ci;
 	}
 	
 	public void load(DataInputStream dis) throws Exception {
@@ -277,6 +259,16 @@ public class Circuit extends CircuitBase {
 				dos.writeInt(output.getId());
 			}
 		}
+	}
+	
+	public String getNewInstanceName() {
+		int index = this.instances.size();
+		String name = String.valueOf(index);
+		while (getInstance(name) != null) {
+			index++;
+			name = String.valueOf(index);
+		}
+		return name;
 	}
 	
 }

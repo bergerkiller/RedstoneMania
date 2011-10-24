@@ -4,14 +4,18 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Level;
 
+import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.NoteBlock;
+import org.bukkit.material.Door;
+import org.bukkit.material.TrapDoor;
 
 import com.bergerkiller.bukkit.rm.Position;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 
 public class PhysicalPort {
 	private static HashMap<Position, PhysicalPort> ports = new HashMap<Position, PhysicalPort>();
@@ -29,6 +33,9 @@ public class PhysicalPort {
 		PhysicalPort p = ports.remove(at);
 		if (p == null) return null;
 		if (p.port.locations.remove(p)) {
+			if (p.port.locations.size() == 0) {
+				((CircuitInstance) p.port.getCircuit()).updateAlive();
+			}
 			p.port.updateLeverPower();
 		}
 		return p;
@@ -45,6 +52,9 @@ public class PhysicalPort {
 	}
 	public static PhysicalPort add(Port port, Position at) {
 		return new PhysicalPort(port, at);
+	}
+	public static void clearAll() {
+		ports.clear();
 	}
 	
 	private static class Update implements Runnable {
@@ -198,7 +208,7 @@ public class PhysicalPort {
 	}
 	public void setLevers(boolean down) {
 		if (this.mainblock != null) {
-			for (BlockFace face : Util.dome) {
+			for (BlockFace face : Util.diamond) {
 				Block b = this.mainblock.getRelative(face);
 				Material type = b.getType();
 		        if (type == Material.LEVER) {
@@ -211,6 +221,30 @@ public class PhysicalPort {
 		        	}
 		        } else if (type == Material.PISTON_STICKY_BASE || type == Material.PISTON_BASE) {
 		        	Util.setPiston(b, down);
+		        } else if (Util.isDoor(type)) {
+		        	Door door = (Door) type.getNewData(b.getData());
+		        	if (down != door.isOpen()) {
+		        		door.setOpen(down);
+			        	Block above = b.getRelative(BlockFace.UP);
+			        	Block below = b.getRelative(BlockFace.DOWN);
+			        	if (Util.isDoor(above.getType())) {
+			        		b.setData(door.getData(), true);
+			        		door.setTopHalf(true);
+			        		above.setData(door.getData(), true);
+			        	} else if (Util.isDoor(below.getType())) {
+			        		above.setData(door.getData(), true);
+			        		door.setTopHalf(true);
+			        		b.setData(door.getData(), true);
+			        	}
+			        	b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
+		        	}
+		        } else if (type == Material.TRAP_DOOR) {
+		        	TrapDoor td = (TrapDoor) type.getNewData(b.getData());
+		        	if (td.isOpen() != down) {
+		        		byte data = (byte) (td.getData() ^ 4);
+		        		b.setData(data);
+		        		b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
+		        	}
 		        }
 			}
 		}

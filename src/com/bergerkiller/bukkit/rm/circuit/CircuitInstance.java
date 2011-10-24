@@ -27,6 +27,15 @@ public class CircuitInstance extends CircuitBase {
 		this.source.removeInstance(this.name);
 		return true;
 	}
+	public void update() {
+		for (Redstone r : this.elements) {
+			r.update();
+			r.onPowerChange();
+		}
+		for (CircuitInstance ci : this.subcircuits) {
+			ci.update();
+		}
+	}
 	
 	public File getFile() {
 		return new File(this.source.getInstanceFolder() + File.separator + this.name + ".instance");

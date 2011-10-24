@@ -1,15 +1,9 @@
 package com.bergerkiller.bukkit.rm;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
-import net.minecraft.server.BlockPiston;
-import net.minecraft.server.World;
-
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.CraftWorld;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -20,13 +14,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.material.Attachable;
 import org.bukkit.material.Directional;
 import org.bukkit.material.MaterialData;
-import org.bukkit.material.PistonBaseMaterial;
 
 public class Util {
 	
 	public static final BlockFace[] bowl = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.DOWN};
 	public static final BlockFace[] dome = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.UP};
 	public static final BlockFace[] radial = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
+	public static final BlockFace[] diamond = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.DOWN, BlockFace.UP};
 	
 	public static BlockFace getFacing(Block b) {
 		return getFacing(b, b.getType());
@@ -87,6 +81,10 @@ public class Util {
 //			e.printStackTrace();
 //		}
     }
+    
+    public static boolean isDoor(Material type) {
+    	return type == Material.WOODEN_DOOR || type == Material.IRON_DOOR;
+    }
     public static boolean isLeverDown(Block lever) {
     	byte dat = lever.getData();
     	return dat == (dat | 0x8);
@@ -140,6 +138,17 @@ public class Util {
     	return rval;
     }
 
+    public static String fixName(String name) {
+    	for (int i = 0; i < name.length(); i++) {
+    		char c = name.charAt(i);
+    		if (c == '>' || c == '<' || c == '|' || c == '^' || c == '/'
+    				|| c == '\\' || c == ':' || c == '?' || c == '"' || c == '*') {
+    			name = name.substring(0, i) + " " + name.substring(i + 1);
+    		}
+    	}
+    	return name;
+    }
+    
     public static void msg(String msg) {
     	for (Player p : Bukkit.getServer().getOnlinePlayers()) {
     		p.sendMessage(msg);
@@ -232,7 +241,7 @@ public class Util {
 		String msgpart = prestring;
 		for (Object element : elements) {
 			//display it
-			String name = element.toString();
+			String name = ChatColor.YELLOW + element.toString();
 			if (msgpart.length() + name.length() < maxlinelength) {
 				if (msgpart.length() != prestring.length()) msgpart += ChatColor.WHITE + delimiter;
 				msgpart += element;

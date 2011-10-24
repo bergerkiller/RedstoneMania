@@ -20,6 +20,7 @@ public class Port extends Redstone {
 	public String name;
 	public HashSet<PhysicalPort> locations = new HashSet<PhysicalPort>();
 	private boolean leverpowered = false;
+	public boolean ignoreNext = false; //prevents infinite loops because of levers
 	
 	/**
 	 * Updates the leverpowered state
@@ -69,10 +70,14 @@ public class Port extends Redstone {
 	}
 	@Override
 	public void onPowerChange() {
-		for (PhysicalPort p : locations) {
-			p.setLevers();
+		if (!this.ignoreNext) {
+			this.ignoreNext = true;
+			for (PhysicalPort p : locations) {
+				p.setLevers();
+			}
 		}
 		super.onPowerChange();
+		this.ignoreNext = false;
 	}
 	
 	public boolean isLeverPowered() {

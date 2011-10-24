@@ -1,9 +1,11 @@
 package com.bergerkiller.bukkit.rm;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -16,6 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitCreator;
 import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
+import com.bergerkiller.bukkit.rm.element.Port;
 
 
 public class RedstoneMania extends JavaPlugin {
@@ -49,7 +52,7 @@ public class RedstoneMania extends JavaPlugin {
 		pm.registerEvent(Event.Type.WORLD_UNLOAD, worldListener, Priority.Monitor, this);
 		
 		//Load
-		Circuit.loadAll();
+		load();
 		
 		//Start scheduler
 		this.updatetask = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
@@ -69,13 +72,21 @@ public class RedstoneMania extends JavaPlugin {
         System.out.println(pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!" );
 	}
 	
-	public void onDisable() {
+	public void load() {
+		Circuit.loadAll();
+	}
+	public void disable() {
 		getServer().getScheduler().cancelTask(this.updatetask);
 		for (Circuit c : Circuit.all()) {
 			for (CircuitInstance ci : c.getInstances()) {
 				ci.save();
 			}
 		}
+		Circuit.clearAll();
+	}
+	
+	public void onDisable() {
+		disable();
 		System.out.println("Redstone Mania disabled!");
 	}
 	
@@ -129,7 +140,26 @@ public class RedstoneMania extends JavaPlugin {
 						sender.sendMessage("Please enter a circuit name to delete too!");
 					}
 				} else if (cmdLabel.equals("list")) {
-					Util.listElements(player, "", " | ", 70, (Object[]) Circuit.getNames());
+					if (args.length == 0) {
+						sender.sendMessage(ChatColor.YELLOW + "Available circuits:");
+						Util.listElements(player, "", " / ", 70, (Object[]) Circuit.getNames());
+					} else {
+						Circuit c = Circuit.get(args[0]);
+						if (c == null) {
+							sender.sendMessage(ChatColor.RED + "Circuit not found!");
+						} else {
+							ArrayList<String> ports = new ArrayList<String>();
+							for (Port p : c.getPorts()) {
+								ports.add(ChatColor.YELLOW + p.name);
+							}
+							sender.sendMessage(ChatColor.YELLOW + "Available ports of '" + c.name + "':");
+							Util.listElements(player, "", " / ", 70, ports.toArray(new Object[0]));
+						}
+					}
+				} else if (cmdLabel.equals("reload")) {
+					disable();
+					load();
+					sender.sendMessage("All circuits have been reloaded!");
 				} else if (cmdLabel.equals("save")) {
 					if (args.length > 0) {
 						if (sel.portnames.size() > 0) {
@@ -138,6 +168,7 @@ public class RedstoneMania extends JavaPlugin {
 								if (name != "") name += " ";
 								name += arg;
 							}
+							name = Util.fixName(name);
 							File path = new File(getDataFolder() + File.separator + "circuits" + File.separator + name + ".circuit");
 							if (!path.exists()) {
 								Circuit.add(new CircuitCreator(player, sel).create(), name);

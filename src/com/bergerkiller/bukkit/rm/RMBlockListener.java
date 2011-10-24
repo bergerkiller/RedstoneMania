@@ -59,6 +59,7 @@ public class RMBlockListener extends BlockListener {
 			String circuitname = event.getLine(1);
 			Circuit c = Circuit.get(circuitname);
 			if (c != null) {
+				event.setLine(2, Util.fixName(event.getLine(2)));
 				String instance = event.getLine(2);
 				CircuitInstance cc = c.getInstance(instance);
 				if (cc == null) {
@@ -68,6 +69,7 @@ public class RMBlockListener extends BlockListener {
 						return;
 					} else {
 						cc.initialize();
+						cc.update();
 						event.getPlayer().sendMessage(ChatColor.GREEN + "A new instance of '" + circuitname + "' has been made!");
 					}
 				}

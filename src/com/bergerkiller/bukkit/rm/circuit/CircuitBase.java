@@ -7,16 +7,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Level;
 
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.Util;
-import com.bergerkiller.bukkit.rm.element.Inverter;
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
-import com.bergerkiller.bukkit.rm.element.Repeater;
 
 public class CircuitBase {
 		
@@ -42,7 +41,6 @@ public class CircuitBase {
 		this.ports.clear();
 		for (Redstone r : this.elements) {
 			r.setCircuit(this);
-			r.onPowerChange();
 			if (r instanceof Port) {
 				this.ports.put(((Port) r).name, (Port) r);
 			}
@@ -64,6 +62,54 @@ public class CircuitBase {
 	}
 	public Collection<Port> getPorts() {
 		return this.ports.values();
+	}
+	
+	public void fixDirectConnections() {
+		this.fixDirectConnections(true);
+	}
+	private boolean fixDirectConnections(boolean checksub) {
+		boolean changed = false;
+		boolean hasDirectConnections = true;
+		while (hasDirectConnections) {
+			hasDirectConnections = false;
+			for (Redstone r : this.elements) {
+				Redstone direct = r.findDirectConnection();
+				if (direct == null) continue;
+				hasDirectConnections = true;
+				changed = true;
+				//remove which: direct or r?
+				if (direct instanceof Port) {
+					if (r instanceof Port) {
+						//which port is better?
+						if (direct.getCircuit() == this) {
+							//direct is top-level, this one is most important
+							if (r.getCircuit() == this) {
+								//r is also top level?! Oh oh! Let's just de-link them for good grace!
+								r.disconnect(direct);
+							} else {
+								r.disable();
+							}
+						} else {
+							direct.disable();
+						}
+					} else {
+						r.disable();
+					}
+				} else {
+					direct.disable();
+				}
+			}
+		}
+		if (checksub) {
+			for (CircuitBase c : this.subcircuits) {
+				if (c.fixDirectConnections(false)) changed = true;
+			}
+		}
+		if (changed) {
+			return this.fixDirectConnections(checksub);
+		} else {
+			return false;
+		}
 	}
 	
 	public Redstone getElement(int id) {
@@ -100,18 +146,54 @@ public class CircuitBase {
 		this.elements = newElements;
 	}
 	
+	/**
+	 * Generates a list of elements which do not require another circuit to exist
+	 * Removes all dependencies and internal ports at the cost of a large schematic
+	 * @return
+	 */
+	public Redstone[] getIndependentElements() {
+		return this.getIndependentElements(true);
+	}
+	private Redstone[] getIndependentElements(boolean main) {
+		ArrayList<Redstone> elements = new ArrayList<Redstone>();
+		for (Redstone r : this.elements) {
+			if (r != null && !r.isDisabled()) {
+				if (!main && r instanceof Port) {
+					Redstone old = r;
+					r = new Redstone();
+					r.setData(old);
+				}
+				elements.add(r);
+			}
+		}
+		for (CircuitBase cb : this.subcircuits) {
+		    for (Redstone r : cb.getIndependentElements()) {
+		    	elements.add(r);
+		    }
+		}
+		return elements.toArray(new Redstone[0]);
+	}
+	public Circuit getIndependentCircuit() {
+		Circuit c = new Circuit();
+		c.elements = this.getIndependentElements();
+		c.subcircuits = new CircuitInstance[0];
+		c.initialize();
+		return c;
+	}
+	
 	public void log() {
 		this.log(0);
 	}
 	public void log(int indent) {
 		RedstoneMania.log(Level.INFO, Util.getIndent(indent) + "Logging circuit: " + this.getFullName());
 		for (Redstone r : this.elements) {
+			if (r.isDisabled()) continue;
 			RedstoneMania.log(Level.INFO, r.toString()); 
 			if (r.inputs.size() > 0) {
-				Util.logElements(Util.getIndent(indent + 1) + "Receives input from: ", " | ", 150, r.inputs.toArray(new Object[0]));
+				Util.logElements(Util.getIndent(indent + 1) + "Receives: ", " | ", 150, r.inputs.toArray(new Object[0]));
 			}
 			if (r.outputs.size() > 0) {
-				Util.logElements(Util.getIndent(indent + 1) + "Supplies output for: ", " | ", 150, r.outputs.toArray(new Object[0]));
+				Util.logElements(Util.getIndent(indent + 1) + "Powers: ", " | ", 150, r.outputs.toArray(new Object[0]));
 			}
 		}
 		for (CircuitBase cb : this.subcircuits) {

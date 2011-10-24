@@ -1,6 +1,6 @@
 name: Redstone Mania
 main: com.bergerkiller.bukkit.rm.RedstoneMania
-version: 1.00
+version: 0.01
 author: bergerkiller
 description: Plugin to virtualize redstone
 commands:

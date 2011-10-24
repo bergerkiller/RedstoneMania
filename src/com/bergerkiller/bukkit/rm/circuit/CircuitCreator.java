@@ -45,7 +45,9 @@ public class CircuitCreator {
 			p.name = entry.getValue();
 			Block b = entry.getKey().getBlock();
 			ports.add(b);
-			map.setValue(map.get(b), p);
+			IntMap m = map.get(b);
+			map.setValue(m, p);
+			m.value.setPosition(entry.getKey().x, entry.getKey().z);
 			items.add(p);
 		}
 	}
@@ -55,6 +57,17 @@ public class CircuitCreator {
 		for (Block p : ports) {
 			createWire(map.get(p).value, p, Material.REDSTONE_WIRE);
 		}
+		//Set the position offset so the circuit will be nicely centered at 0x0
+		double midx = 0;
+		double midz = 0;
+		for (Redstone r : items) {
+			midx += r.getX() / items.size();
+			midz += r.getZ() / items.size();
+		}
+		for (Redstone r : items) {
+			r.setPosition(r.getX() - (int) midx, r.getZ() - (int) midz);
+		}
+		
 		//save
 		Circuit c = new Circuit();
 		c.elements = items.toArray(new Redstone[0]);
@@ -100,7 +113,7 @@ public class CircuitCreator {
 		if (m.value == null) {
 			if (Util.isRedstoneTorch(type)) {
 				map.setValue(m, new Inverter());
-				m.value.setPowered(type == Material.REDSTONE_TORCH_ON);
+				m.value.setPowered(type == Material.REDSTONE_TORCH_OFF);
 				m.value.setDelay(getDelay(block, type));
 				m.value.setPosition(block.getX(), block.getZ());
 				items.add(m.value);
@@ -115,6 +128,7 @@ public class CircuitCreator {
 			} else if (type == Material.REDSTONE_WIRE) {
 				map.setValue(m, new Redstone());
 				m.value.setPosition(block.getX(), block.getZ());
+				m.value.setPowered(block.getData() > 0);
 				items.add(m.value);
 				createWire(m.value, block, type);
 			} else if (type == Material.LEVER) {
@@ -136,6 +150,7 @@ public class CircuitCreator {
 								if (port == null) {
 									RedstoneMania.log(Level.WARNING, "[Creation] Failed to find port '" + realport.name + "' in circuit '" + ci.getFullName() + "'!");
 								} else {
+									port.setPowered(realport.isPowered());
 									boolean outofreach = false;
 									for (PhysicalPort pp : realport.locations) {
 										Block at = pp.position.getBlock();
