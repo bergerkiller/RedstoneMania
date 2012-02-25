@@ -309,7 +309,7 @@ public class Redstone {
 			rval = new Port();
 		} else {
 			rval = new Redstone();
-			RedstoneMania.log(Level.SEVERE, "Unknown redstone type: " + type);
+			RedstoneMania.plugin.log(Level.SEVERE, "Unknown redstone type: " + type);
 		}
 		//init
 		rval.x = stream.readShort();

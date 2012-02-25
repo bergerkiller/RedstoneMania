@@ -13,8 +13,11 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.material.Diode;
 
+import com.bergerkiller.bukkit.common.BlockLocation;
+import com.bergerkiller.bukkit.common.BlockMap;
+import com.bergerkiller.bukkit.common.utils.BlockUtil;
+import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.rm.PlayerSelect;
-import com.bergerkiller.bukkit.rm.Position;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.RedstoneMap;
 import com.bergerkiller.bukkit.rm.Util;
@@ -33,21 +36,21 @@ public class CircuitCreator {
 	private ArrayList<Redstone> items = new ArrayList<Redstone>();
 	private HashMap<String, CircuitInstance> subcircuits = new HashMap<String, CircuitInstance>();
 	private ArrayList<Block> ports = new ArrayList<Block>();
-	private HashMap<Position, Integer> delays = new HashMap<Position, Integer>();
+	private BlockMap<Integer> delays = new BlockMap<Integer>();
 	private final int torchdelay = 2;
 	
 	public CircuitCreator(Player by, PlayerSelect from) {
 		this.by = by;
 		//prepare the ports, items and delays
 		this.delays = from.delays;
-		for (Map.Entry<Position, String> entry : from.portnames.entrySet()) {
+		for (Map.Entry<String, BlockLocation> entry : from.portnames.entrySet()) {
 			Port p = new Port();
-			p.name = entry.getValue();
-			Block b = entry.getKey().getBlock();
+			p.name = entry.getKey();
+			Block b = entry.getValue().getBlock();
 			ports.add(b);
 			IntMap m = map.get(b);
 			map.setValue(m, p);
-			m.value.setPosition(entry.getKey().x, entry.getKey().z);
+			m.value.setPosition(entry.getValue().x, entry.getValue().z);
 			items.add(p);
 		}
 	}
@@ -88,7 +91,7 @@ public class CircuitCreator {
 	}
 	
 	private int getDelay(Block b, Material type) {
-		Position pos = new Position(b);
+		BlockLocation pos = new BlockLocation(b);
 		if (delays.containsKey(pos)) {
 			return delays.get(pos);
 		} else if (Util.isRedstoneTorch(type)) {
@@ -137,18 +140,18 @@ public class CircuitCreator {
 				if (searchport != null) {
 					CircuitBase base = searchport.getCircuit();
 					if (base == null) {
-						RedstoneMania.log(Level.SEVERE, "[Creation] Failed to obtain circuit from port '" + searchport.name + "'!");
+						RedstoneMania.plugin.log(Level.SEVERE, "[Creation] Failed to obtain circuit from port '" + searchport.name + "'!");
 					} else {
 						CircuitInstance ci = getCircuit(base);
 						if (ci == null) {
-							RedstoneMania.log(Level.SEVERE, "[Creation] Failed to convert circuit '" + base.getFullName() + "'!");
+							RedstoneMania.plugin.log(Level.SEVERE, "[Creation] Failed to convert circuit '" + base.getFullName() + "'!");
 						} else {
 							//get the ports of the found circuit
 							Collection<Port> realports = base.getPorts();
 							for (Port realport : realports) {
 								Port port = ci.getPort(realport.name);
 								if (port == null) {
-									RedstoneMania.log(Level.WARNING, "[Creation] Failed to find port '" + realport.name + "' in circuit '" + ci.getFullName() + "'!");
+									RedstoneMania.plugin.log(Level.WARNING, "[Creation] Failed to find port '" + realport.name + "' in circuit '" + ci.getFullName() + "'!");
 								} else {
 									port.setPowered(realport.isPowered());
 									boolean outofreach = false;
@@ -157,7 +160,7 @@ public class CircuitCreator {
 										if (at == null) {
 											outofreach = true;
 										} else {
-											for (BlockFace leverface : Util.dome) {
+											for (BlockFace leverface : FaceUtil.attachedFaces) {
 												Block lever = at.getRelative(leverface);
 												if (lever.getType() == Material.LEVER) {
 													m = map.get(lever);
@@ -185,11 +188,16 @@ public class CircuitCreator {
 	}
 	
 	private void createPort(Port redstone, Block lever, Material type) {
-		for (BlockFace face : Util.bowl) {
+		for (BlockFace face : FaceUtil.attachedFacesDown) {
 			Block b = lever.getRelative(face);
 			Material btype = b.getType();
 			if (btype == Material.REDSTONE_WIRE) {
-				create(b).value.connect(redstone);
+				if (face == BlockFace.DOWN) {
+					redstone.connectTo(create(b).value);
+				} else {
+					create(b).value.connect(redstone);
+				}
+				
 			} else if (Util.isRedstoneTorch(btype)) {
 				create(b).value.connectTo(redstone);
 			}
@@ -197,7 +205,7 @@ public class CircuitCreator {
 	}
 	
 	private void createInverter(Inverter redstone, Block inverter, Material type) {
-		for (BlockFace face : Util.bowl) {
+		for (BlockFace face : FaceUtil.attachedFacesDown) {
 			Block b = inverter.getRelative(face);
 			Material btype = b.getType();
 			if (btype == Material.REDSTONE_WIRE) {
@@ -205,7 +213,7 @@ public class CircuitCreator {
 			} else if (btype == Material.DIODE_BLOCK_OFF || btype == Material.DIODE_BLOCK_ON) {
 				if (face != BlockFace.DOWN) { 
 					//connected to the input?
-					BlockFace facing = Util.getFacing(b, btype);
+					BlockFace facing = BlockUtil.getFacing(b);
 					if (facing == face) {
 						redstone.connectTo(create(b).value);
 					}
@@ -217,18 +225,18 @@ public class CircuitCreator {
 		if (Util.isSolid(abovetype)) {
 			create(above);
 		}
-		create(Util.getAttachedBlock(inverter));
+		create(BlockUtil.getAttachedBlock(inverter));
 	}
 	
 	private void createRepeater(Repeater redstone, Block repeater, Material type) {
-		BlockFace facing = Util.getFacing(repeater, type);
+		BlockFace facing = BlockUtil.getFacing(repeater);
 		Block output = repeater.getRelative(facing);
 		Material outputtype = output.getType();
 		if (outputtype == Material.REDSTONE_WIRE) {
 			//connect this repeater to wire
 			redstone.connectTo(create(output).value);
 		} else if (Util.isDiode(outputtype)) {
-			BlockFace oface = Util.getFacing(output, outputtype);
+			BlockFace oface = BlockUtil.getFacing(output);
 			if (facing == oface) {
 				redstone.connectTo(create(output).value);
 			}
@@ -241,7 +249,7 @@ public class CircuitCreator {
 			//connect this repeater to wire
 			create(input).value.connectTo(redstone);
 		} else if (Util.isDiode(inputtype)) {
-			BlockFace oface = Util.getFacing(input, inputtype);
+			BlockFace oface = BlockUtil.getFacing(input);
 			if (facing == oface) {
 				create(input).value.connectTo(redstone);
 			}
@@ -277,7 +285,9 @@ public class CircuitCreator {
 	
 	private void createWire(Redstone redstone, Block wire, Material type) {
 		//wire - first find all nearby elements
-		for (BlockFace face : Util.radial) {
+		Block abovewire = wire.getRelative(BlockFace.UP);
+		Material abovetype = abovewire.getType();
+		for (BlockFace face : FaceUtil.axis) {
 			Block b = wire.getRelative(face);
 			Material btype = b.getType();
 			if (btype == Material.REDSTONE_WIRE) {
@@ -294,7 +304,7 @@ public class CircuitCreator {
 				create(b); //we assume that the torch handles direct wire connection
 			} else if (Util.isDiode(btype)) {
 				//powering or receiving power
-				BlockFace facing = Util.getFacing(b, btype);
+				BlockFace facing = BlockUtil.getFacing(b);
 				if (facing == face) {
 					//wire powers repeater
 					redstone.connectTo(create(b).value);
@@ -305,7 +315,7 @@ public class CircuitCreator {
 			} else if (btype == Material.LEVER) {
 				//let the port handle this
 				create(b);
-			} else if (Util.isSolid(btype)) {
+			} else if (abovetype == Material.AIR && Util.isSolid(btype)) {
 				//wire on top?
 				Block above = b.getRelative(BlockFace.UP);
 				if (above.getType() == Material.REDSTONE_WIRE) {
@@ -313,6 +323,10 @@ public class CircuitCreator {
 				}
 				create(b);
 			}
+		}
+		//Lever above?
+		if (abovetype == Material.LEVER) {
+			create(abovewire);
 		}
 		//update the block this wire sits on
 		create(wire.getRelative(BlockFace.DOWN));

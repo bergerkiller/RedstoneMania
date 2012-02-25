@@ -6,6 +6,8 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
+import com.bergerkiller.bukkit.common.utils.BlockUtil;
+import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.rm.Util;
 
 /**
@@ -38,7 +40,7 @@ public class SolidComponent extends Redstone {
 			outputs.add(below);
 		}
 		//Check all sides and up for torches
-		for (BlockFace face : Util.dome) {
+		for (BlockFace face : FaceUtil.attachedFaces) {
 			Block b = block.getRelative(face);
 			Material type = b.getType();
 			if (type == Material.REDSTONE_TORCH_ON || type == Material.REDSTONE_TORCH_OFF) {
@@ -59,7 +61,7 @@ public class SolidComponent extends Redstone {
 					}
 				}
 			} else if (type == Material.DIODE_BLOCK_ON || type == Material.DIODE_BLOCK_OFF) {
-				BlockFace facing = Util.getFacing(b, type);
+				BlockFace facing = BlockUtil.getFacing(b);
 				//supplying or receiving, or none?
 				if (facing == face) {
 					//receiving
@@ -84,7 +86,7 @@ public class SolidComponent extends Redstone {
 			}
 		} else if (type == Material.DIODE_BLOCK_ON || type == Material.DIODE_BLOCK_OFF) {
 			//powered by repeater?
-			BlockFace facing = Util.getFacing(side, Material.DIODE_BLOCK_ON);
+			BlockFace facing = BlockUtil.getFacing(side);
 			return facing == face;
 		}
 		if (main.getRelative(BlockFace.UP).getType() == Material.AIR) {

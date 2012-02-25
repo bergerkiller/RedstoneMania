@@ -7,6 +7,9 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
+import com.bergerkiller.bukkit.common.BlockLocation;
+import com.bergerkiller.bukkit.common.BlockMap;
+
 
 public class PlayerSelect {
 	private static HashMap<String, PlayerSelect> selections = new HashMap<String, PlayerSelect>();
@@ -19,29 +22,37 @@ public class PlayerSelect {
 		return ps;
 	}
 	
-	public Position selectedblock;
-	public HashMap<Position, Integer> delays = new HashMap<Position, Integer>();
-	public HashMap<Position, String> portnames = new HashMap<Position, String>();
+	public BlockLocation selectedblock;
+	public BlockMap<Integer> delays = new BlockMap<Integer>();
+	public HashMap<String, BlockLocation> portnames = new HashMap<String, BlockLocation>();
+	public int clickdelay = -1;
 	
 	public void setDelay(int delay) {
-		delays.put(selectedblock, delay);
+		this.delays.put(this.selectedblock, delay);
 	}
 	public void setPort(String name) {
-		portnames.put(selectedblock, name);
+		this.portnames.put(name, this.selectedblock);
 	}
-	public void clear() {
-		delays.clear();
+	public void clearPorts() {
+		this.portnames.clear();
+	}
+	public void clearDelays() {
+		this.delays.clear();
 	}
 
 	public void set(Location l) {
 		this.set(l.getBlock());
 	}
 	public void set(Block b) {
-		this.selectedblock = new Position();
-		this.selectedblock.worldname = b.getWorld().getName();
-		this.selectedblock.x = b.getX();
-		this.selectedblock.y = b.getY();
-		this.selectedblock.z = b.getZ();
+		this.selectedblock = new BlockLocation(b);
+	}
+	public boolean setDelay() {
+		if (this.clickdelay >= 0 && this.isDelayable()) {
+			this.setDelay(this.clickdelay);
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 	public Block getBlock() {

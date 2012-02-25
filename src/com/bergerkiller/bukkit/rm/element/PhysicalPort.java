@@ -1,35 +1,33 @@
 package com.bergerkiller.bukkit.rm.element;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.logging.Level;
 
-import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.NoteBlock;
-import org.bukkit.material.Door;
-import org.bukkit.material.TrapDoor;
 
-import com.bergerkiller.bukkit.rm.Position;
+import com.bergerkiller.bukkit.common.BlockLocation;
+import com.bergerkiller.bukkit.common.BlockMap;
+import com.bergerkiller.bukkit.common.utils.BlockUtil;
+import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.Util;
 import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 
 public class PhysicalPort {
-	private static HashMap<Position, PhysicalPort> ports = new HashMap<Position, PhysicalPort>();
-	private static Position getPostion(Block at) {
+	private static BlockMap<PhysicalPort> ports = new BlockMap<PhysicalPort>();
+	private static BlockLocation getPostion(Block at) {
 		Material type = at.getType();
 		if (type == Material.LEVER || type == Material.SIGN_POST || type == Material.WALL_SIGN) {
-			at = Util.getAttachedBlock(at);
+			at = BlockUtil.getAttachedBlock(at);
 		}
-		return new Position(at);
+		return new BlockLocation(at);
 	}
 	public static PhysicalPort get(Block at) {
 		return ports.get(getPostion(at));
 	}
-	private static PhysicalPort remove(Position at) {
+	private static PhysicalPort remove(BlockLocation at) {
 		PhysicalPort p = ports.remove(at);
 		if (p == null) return null;
 		if (p.port.locations.remove(p)) {
@@ -50,7 +48,7 @@ public class PhysicalPort {
 	public static Collection<PhysicalPort> getAll() {
 		return ports.values();
 	}
-	public static PhysicalPort add(Port port, Position at) {
+	public static PhysicalPort add(Port port, BlockLocation at) {
 		return new PhysicalPort(port, at);
 	}
 	public static void clearAll() {
@@ -94,11 +92,11 @@ public class PhysicalPort {
 		}
 	}
 	
-	public Position position;
+	public BlockLocation position;
 	public Port port;
 	private Block mainblock = null;
 		
-	public PhysicalPort(Port port, Position at) {
+	public PhysicalPort(Port port, BlockLocation at) {
 		this.port = port;
 		this.position = at;
 		ports.put(this.position, this);
@@ -114,7 +112,7 @@ public class PhysicalPort {
 		private PhysicalPort p;
 		public void run() {
 			//is this main block even a valid block?!
-			for (BlockFace face : Util.dome) {
+			for (BlockFace face : FaceUtil.attachedFaces) {
 				Block b = p.mainblock.getRelative(face);
 				Material type = b.getType();
 				if (type == Material.SIGN_POST || type == Material.WALL_SIGN) {
@@ -128,19 +126,19 @@ public class PhysicalPort {
 			builder.append("Auto-removed physical port [");
 			builder.append(p.mainblock.getX() + "/" + p.mainblock.getY() + "/" + p.mainblock.getZ());
 			builder.append("] for port '" + p.port.name + "' in circuit instance '" + p.port.getCircuit().name);
-			RedstoneMania.log(Level.WARNING, builder.toString());
+			RedstoneMania.plugin.log(Level.WARNING, builder.toString());
 			remove(p.mainblock);
 		}
 	}
 	
 	public void updateActive() {
-		this.setActive(this.position.isVisible());
+		this.setActive(this.position.isLoaded());
 	}
 	public void setActive(boolean active) {
 		if ((this.mainblock != null) != active) {
 			if (active) {
 				this.mainblock = this.position.getBlock();
-				if (this.mainblock == null) return;
+				if (this.mainblock == null || this.mainblock.getWorld() == null) return;
 				this.setLevers();
 				RedstoneMania.plugin.getServer().getScheduler().scheduleSyncDelayedTask(RedstoneMania.plugin, new ExistenceCheck(this), 0);
 			} else {
@@ -154,11 +152,11 @@ public class PhysicalPort {
 	}
 	public void updateLeverPower(boolean setport) {
 		if (this.mainblock == null) return;
-		for (BlockFace face : Util.dome) {
+		for (BlockFace face : FaceUtil.attachedFaces) {
 			Block lever = this.mainblock.getRelative(face);
 			if (lever.getType() == Material.LEVER) {
-				Util.setLever(lever, false);
-				for (BlockFace leverside : Util.bowl) {
+				BlockUtil.setLever(lever, false);
+				for (BlockFace leverside : FaceUtil.attachedFacesDown) {
 					Block side = lever.getRelative(leverside);
 					Material type = side.getType();
 					if (type == Material.REDSTONE_WIRE || type == Material.REDSTONE_TORCH_ON || type == Material.DIODE_BLOCK_ON) {
@@ -207,47 +205,8 @@ public class PhysicalPort {
 		this.setLevers(this.port.hasPower() && !this.leverpowered);
 	}
 	public void setLevers(boolean down) {
-		if (this.mainblock != null) {
-			for (BlockFace face : Util.diamond) {
-				Block b = this.mainblock.getRelative(face);
-				Material type = b.getType();
-		        if (type == Material.LEVER) {
-		        	if (Util.isAttached(b, this.mainblock)) {
-		        		Util.setLever(b, down);
-		        	}
-		        } else if (type == Material.NOTE_BLOCK) {
-		        	if (down) {
-		        		((NoteBlock) b.getState()).play();
-		        	}
-		        } else if (type == Material.PISTON_STICKY_BASE || type == Material.PISTON_BASE) {
-		        	Util.setPiston(b, down);
-		        } else if (Util.isDoor(type)) {
-		        	Door door = (Door) type.getNewData(b.getData());
-		        	if (down != door.isOpen()) {
-		        		door.setOpen(down);
-			        	Block above = b.getRelative(BlockFace.UP);
-			        	Block below = b.getRelative(BlockFace.DOWN);
-			        	if (Util.isDoor(above.getType())) {
-			        		b.setData(door.getData(), true);
-			        		door.setTopHalf(true);
-			        		above.setData(door.getData(), true);
-			        	} else if (Util.isDoor(below.getType())) {
-			        		above.setData(door.getData(), true);
-			        		door.setTopHalf(true);
-			        		b.setData(door.getData(), true);
-			        	}
-			        	b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
-		        	}
-		        } else if (type == Material.TRAP_DOOR) {
-		        	TrapDoor td = (TrapDoor) type.getNewData(b.getData());
-		        	if (td.isOpen() != down) {
-		        		byte data = (byte) (td.getData() ^ 4);
-		        		b.setData(data);
-		        		b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
-		        	}
-		        }
-			}
-		}
+		if (this.mainblock == null) return;
+		Util.setBlock(this.mainblock, down);
 		if (!down) {
 			//power change?
 			this.updateLeverPower();

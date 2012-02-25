@@ -185,10 +185,10 @@ public class CircuitBase {
 		this.log(0);
 	}
 	public void log(int indent) {
-		RedstoneMania.log(Level.INFO, Util.getIndent(indent) + "Logging circuit: " + this.getFullName());
+		RedstoneMania.plugin.log(Level.INFO, Util.getIndent(indent) + "Logging circuit: " + this.getFullName());
 		for (Redstone r : this.elements) {
 			if (r.isDisabled()) continue;
-			RedstoneMania.log(Level.INFO, r.toString()); 
+			RedstoneMania.plugin.log(Level.INFO, r.toString()); 
 			if (r.inputs.size() > 0) {
 				Util.logElements(Util.getIndent(indent + 1) + "Receives: ", " | ", 150, r.inputs.toArray(new Object[0]));
 			}
@@ -239,18 +239,18 @@ public class CircuitBase {
 				this.load(dis);
 				succ = true;
 			} catch (IOException ex) {
-				RedstoneMania.log(Level.SEVERE, "Error while reading data: " + file.getName());
+				RedstoneMania.plugin.log(Level.SEVERE, "Error while reading data: " + file.getName());
 				ex.printStackTrace();
 			} catch (Exception ex) {
-				RedstoneMania.log(Level.SEVERE, "Error while loading data: " + file.getName());
+				RedstoneMania.plugin.log(Level.SEVERE, "Error while loading data: " + file.getName());
 				ex.printStackTrace();
 			}
 			dis.close();
 		} catch (FileNotFoundException ex) {
-			RedstoneMania.log(Level.WARNING, "Circuit not found: " + file.getName());
+			RedstoneMania.plugin.log(Level.WARNING, "Circuit not found: " + file.getName());
 			ex.printStackTrace();
 		} catch (IOException ex) {
-			RedstoneMania.log(Level.SEVERE, "Failed to load circuit: " + file.getName());
+			RedstoneMania.plugin.log(Level.SEVERE, "Failed to load circuit: " + file.getName());
 		}
 		return succ;
 	}
@@ -263,18 +263,18 @@ public class CircuitBase {
 				this.save(dos);
 				succ = true;
 			} catch (IOException ex) {
-				RedstoneMania.log(Level.SEVERE, "Error while writing data: " + file.getName());
+				RedstoneMania.plugin.log(Level.SEVERE, "Error while writing data: " + file.getName());
 				ex.printStackTrace();
 			} catch (Exception ex) {
-				RedstoneMania.log(Level.SEVERE, "Error while saving data: " + file.getName());
+				RedstoneMania.plugin.log(Level.SEVERE, "Error while saving data: " + file.getName());
 				ex.printStackTrace();
 			}
 			dos.close();
 		} catch (FileNotFoundException ex) {
-			RedstoneMania.log(Level.WARNING, "Circuit not accessible: " + file.getName());
+			RedstoneMania.plugin.log(Level.WARNING, "Circuit not accessible: " + file.getName());
 			ex.printStackTrace();
 		} catch (IOException ex) {
-			RedstoneMania.log(Level.SEVERE, "Failed to save circuit: " + file.getName());
+			RedstoneMania.plugin.log(Level.SEVERE, "Failed to save circuit: " + file.getName());
 			ex.printStackTrace();
 		}
 		return succ;

@@ -76,7 +76,7 @@ public class Circuit extends CircuitBase {
 			String circuitname = circuitfile.getName();
 			Circuit c = get(circuitname);
 			if (c == null) {
-				RedstoneMania.log(Level.WARNING, "Circuit instances of '" + circuitname + "' are not loaded, because the circuit doesn't exist!");
+				RedstoneMania.plugin.log(Level.WARNING, "Circuit instances of '" + circuitname + "' are not loaded, because the circuit doesn't exist!");
 			} else {
 				for (String name : c.getInstanceFolder().list()) {
 					if (name.toLowerCase().endsWith(".instance")) {
@@ -144,13 +144,13 @@ public class Circuit extends CircuitBase {
 			Redstone from = this.elements[i];
 			Redstone to = c.elements[i];
 			if (from.getId() != to.getId()) {
-				RedstoneMania.log(Level.SEVERE, "Failed to make a new instance of '" + this.name + "': ID out of sync!");
+				RedstoneMania.plugin.log(Level.SEVERE, "Failed to make a new instance of '" + this.name + "': ID out of sync!");
 				return null;
 			} else {
 				for (Redstone input : from.inputs) {
 					Redstone element = c.getElement(input);
 					if (element == null) {
-						RedstoneMania.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': input element ID mismatch!");
+						RedstoneMania.plugin.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': input element ID mismatch!");
 						return null;
 					} else {
 						element.connectTo(to);
@@ -159,7 +159,7 @@ public class Circuit extends CircuitBase {
 				for (Redstone output : from.outputs) {
 					Redstone element = c.getElement(output);
 					if (element == null) {
-						RedstoneMania.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': output element ID mismatch!");
+						RedstoneMania.plugin.log(Level.SEVERE, "Failed to create a new instance of '" + this.name + "': output element ID mismatch!");
 						return null;
 					} else {
 						to.connectTo(element);

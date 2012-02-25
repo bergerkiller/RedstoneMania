@@ -7,7 +7,7 @@ import java.util.HashSet;
 
 import org.bukkit.block.Block;
 
-import com.bergerkiller.bukkit.rm.Position;
+import com.bergerkiller.bukkit.common.BlockLocation;
 
 public class Port extends Redstone {
 
@@ -91,9 +91,9 @@ public class Port extends Redstone {
 	}
 	
 	public PhysicalPort addPhysical(Block at) {
-		return this.addPhysical(new Position(at));
+		return this.addPhysical(new BlockLocation(at));
 	}
-	public PhysicalPort addPhysical(Position at) {
+	public PhysicalPort addPhysical(BlockLocation at) {
 		return new PhysicalPort(this, at);
 	}
 	
@@ -101,7 +101,7 @@ public class Port extends Redstone {
 		super.loadInstance(stream);
 		int loccount = stream.readShort();
 		for (int pi = 0; pi < loccount; pi++) {
-			Position at = new Position(stream.readUTF(), stream.readInt(), stream.readByte(), stream.readInt());
+			BlockLocation at = new BlockLocation(stream.readUTF(), stream.readInt(), stream.readByte(), stream.readInt());
 			this.addPhysical(at).setLeverPowered(stream.readBoolean());
 		}
 	}
@@ -109,7 +109,7 @@ public class Port extends Redstone {
 		super.saveInstance(stream);
 		stream.writeShort(this.locations.size());
 		for (PhysicalPort pp : this.locations) {
-			stream.writeUTF(pp.position.worldname);
+			stream.writeUTF(pp.position.world);
 			stream.writeInt(pp.position.x);
 			stream.writeByte(pp.position.y);
 			stream.writeInt(pp.position.z);

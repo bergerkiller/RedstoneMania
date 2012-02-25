@@ -2,60 +2,41 @@ package com.bergerkiller.bukkit.rm;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.Event.Priority;
-import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.permissions.PermissionDefault;
 
+import com.bergerkiller.bukkit.common.PluginBase;
+import com.bergerkiller.bukkit.common.Task;
+import com.bergerkiller.bukkit.common.utils.StringUtil;
 import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitCreator;
 import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 import com.bergerkiller.bukkit.rm.element.Port;
 
+public class RedstoneMania extends PluginBase {
 
-public class RedstoneMania extends JavaPlugin {
+	public RedstoneMania() {
+		super(1896, 2000);
+	}
 
 	public static RedstoneMania plugin;
-	
-	private final RMPlayerListener playerListener = new RMPlayerListener();
-	private final RMBlockListener blockListener = new RMBlockListener();
-	private final RMWorldListener worldListener = new RMWorldListener();
-	
-	private static Logger logger = Logger.getLogger("Minecraft");
-	public static void log(Level level, String message) {
-		logger.log(level, "[Redstone Mania] " + message);
-	}
-	
-	private int updatetask = -1;
-	public void onEnable() {
+			
+	private Task updatetask;
+	public void enable() {
 		plugin = this;
 		
 		//General registering
-		PluginManager pm = getServer().getPluginManager();
-		pm.registerEvent(Event.Type.REDSTONE_CHANGE, blockListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.BLOCK_PLACE, blockListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.BLOCK_PHYSICS, blockListener, Priority.Normal, this);
-		pm.registerEvent(Event.Type.SIGN_CHANGE, blockListener, Priority.Highest, this);
-		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.CHUNK_LOAD, worldListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.CHUNK_UNLOAD, worldListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.WORLD_LOAD, worldListener, Priority.Monitor, this);
-		pm.registerEvent(Event.Type.WORLD_UNLOAD, worldListener, Priority.Monitor, this);
+		this.register(RMListener.class);
+		this.register("circuit");
 		
 		//Load
 		load();
 		
 		//Start scheduler
-		this.updatetask = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+		this.updatetask = new Task(this) {
 			public void run() {
 				for (Circuit c : Circuit.all()) {
 					for (CircuitInstance ci : c.getInstances()) {
@@ -63,20 +44,15 @@ public class RedstoneMania extends JavaPlugin {
 					}
 				}
 			}
-		}, 1, 1);
-		
-		this.getCommand("circuit").setExecutor(this);
-		
-        //final msg
-        PluginDescriptionFile pdfFile = this.getDescription();
-        System.out.println(pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!" );
+		}.start(1, 1);
 	}
 	
 	public void load() {
 		Circuit.loadAll();
 	}
+	
 	public void disable() {
-		getServer().getScheduler().cancelTask(this.updatetask);
+		Task.stop(this.updatetask);
 		for (Circuit c : Circuit.all()) {
 			for (CircuitInstance ci : c.getInstances()) {
 				ci.save();
@@ -84,20 +60,19 @@ public class RedstoneMania extends JavaPlugin {
 		}
 		Circuit.clearAll();
 	}
-	
-	public void onDisable() {
-		disable();
-		System.out.println("Redstone Mania disabled!");
-	}
-	
+		
 	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String cmdLabel, String[] args) {
+	public boolean command(CommandSender sender, String cmdLabel, String[] args) {
 		if (sender instanceof Player) {
 			Player player = (Player) sender;
+			if (!player.hasPermission("redstonemania.use")) {
+				
+				return false;
+			}
 			PlayerSelect sel = PlayerSelect.get(player);
 			if (args.length > 0) {
 				cmdLabel = args[0].toLowerCase();
-				args = Util.remove(args, 0);
+				args = StringUtil.remove(args, 0);
 				if (cmdLabel.equals("setport") || cmdLabel.equals("port")) {
 					if (sel.isRedstone()) {
 						if (args.length > 0) {
@@ -113,6 +88,29 @@ public class RedstoneMania extends JavaPlugin {
 						}
 					} else {
 						sender.sendMessage("Please select a wire to set a port to first!");
+					}
+				} else if (cmdLabel.equals("clearports")) {
+					sel.clearPorts();
+					sender.sendMessage(ChatColor.YELLOW + "You cleared all set ports!");
+				} else if (cmdLabel.equals("cleardelays")) {
+					sel.clearDelays();
+					sender.sendMessage(ChatColor.YELLOW + "You cleared all set delays!");
+				} else if (cmdLabel.equals("clear")) {
+					sel.clearPorts();
+					sel.clearDelays();
+					sender.sendMessage(ChatColor.YELLOW + "You cleared all set ports and delays!");
+				} else if (cmdLabel.equals("clickdelay")) {
+					if (args.length > 0) {
+						try {
+							sel.clickdelay = Integer.parseInt(args[0]);
+						} catch (Exception ex) {
+							sel.clickdelay = -1;
+						}
+						if (sel.clickdelay < 0) {
+							sender.sendMessage(ChatColor.YELLOW + "Click-set delay is now disabled!");
+						} else {
+							sender.sendMessage(ChatColor.GREEN + "Click-set delay is now set at " + sel.clickdelay +  " ticks!");
+						}
 					}
 				} else if (cmdLabel.equals("setdelay") || cmdLabel.equals("delay")) {
 					if (sel.isDelayable()) {
@@ -190,6 +188,11 @@ public class RedstoneMania extends JavaPlugin {
 			sender.sendMessage("This command is only for players!");
 		}
 		return true;
+	}
+
+	@Override
+	public void permissions() {
+		this.loadPermission("redstonemania.use", PermissionDefault.OP, "If the player can use redstone mania's commands and ports");
 	}
 	
 	

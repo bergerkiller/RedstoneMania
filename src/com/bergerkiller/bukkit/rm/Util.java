@@ -5,55 +5,20 @@ import java.util.logging.Level;
 
 import org.bukkit.command.CommandSender;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Player;
-import org.bukkit.material.Attachable;
-import org.bukkit.material.Directional;
-import org.bukkit.material.MaterialData;
+import org.bukkit.block.NoteBlock;
+import org.bukkit.material.Door;
+import org.bukkit.material.TrapDoor;
+
+import com.bergerkiller.bukkit.common.utils.BlockUtil;
+import com.bergerkiller.bukkit.common.utils.FaceUtil;
 
 public class Util {
 	
-	public static final BlockFace[] bowl = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.DOWN};
-	public static final BlockFace[] dome = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.UP};
-	public static final BlockFace[] radial = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
-	public static final BlockFace[] diamond = new BlockFace[] {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.DOWN, BlockFace.UP};
-	
-	public static BlockFace getFacing(Block b) {
-		return getFacing(b, b.getType());
-	}
-	public static BlockFace getFacing(Block b, Material type) {
-		MaterialData data = type.getNewData(b.getData());
-		if (data != null && data instanceof Directional) {
-			return ((Directional) data).getFacing();
-		} else {
-			return BlockFace.NORTH;
-		}
-	}
-    public static Block getAttachedBlock(Block b) {
-    	if (b == null) return null;
-    	MaterialData m = b.getState().getData();
-    	BlockFace face = BlockFace.DOWN;
-    	if (m instanceof Attachable) {
-    		face = ((Attachable) m).getAttachedFace();
-    	}
-    	return b.getRelative(face);
-    }
-    public static void setLever(Block lever, boolean down) {
-		byte data = lever.getData();
-        int newData;
-        if (down) {
-        	newData = data | 0x8;
-        } else {
-        	newData = data & 0x7;
-        }
-        if (newData != data) {
-            lever.setData((byte) newData, true);
-        }
-    }
     public static void setPiston(Block piston, boolean stretched) {
     	//TODO GET PISTON WORKING
 //    	PistonBaseMaterial mat = (PistonBaseMaterial) Material.PISTON_BASE.getNewData(piston.getData());
@@ -90,7 +55,7 @@ public class Util {
     	return dat == (dat | 0x8);
     }
     public static boolean isAttached(Block block, Block to) {
-    	Block c = getAttachedBlock(block);
+    	Block c = BlockUtil.getAttachedBlock(block);
     	if (c.getX() == to.getX()) {
         	if (c.getY() == to.getY()) {
             	if (c.getZ() == to.getZ()) {
@@ -125,18 +90,6 @@ public class Util {
 		}
 		return false;
     }
-    
-    public static String[] remove(String[] input, int index) {
-    	String[] rval = new String[input.length - 1];
-    	int i = 0;
-    	for (int ii = 0; ii < input.length; ii++) {
-    		if (ii != index) {
-    			rval[i] = input[ii];
-    			i++;
-    		}
-    	}
-    	return rval;
-    }
 
     public static String fixName(String name) {
     	for (int i = 0; i < name.length(); i++) {
@@ -149,12 +102,6 @@ public class Util {
     	return name;
     }
     
-    public static void msg(String msg) {
-    	for (Player p : Bukkit.getServer().getOnlinePlayers()) {
-    		p.sendMessage(msg);
-    	}
-    }
-
     public static boolean isSolid(Material type) {
     	switch(type) {
     	case STONE : return true;
@@ -216,6 +163,51 @@ public class Util {
     	return rval;
     }
     
+    public static void setBlock(Block mainblock, boolean toggled) {
+		if (mainblock != null) {
+			for (BlockFace face : FaceUtil.attachedFacesDown) {
+				Block b = mainblock.getRelative(face);
+				Material type = b.getType();
+		        if (type == Material.LEVER) {
+		        	if (Util.isAttached(b, mainblock)) {
+		        		BlockUtil.setLever(b, toggled);
+		        	}
+		        } else if (type == Material.NOTE_BLOCK) {
+		        	if (toggled) {
+		        		((NoteBlock) b.getState()).play();
+		        	}
+		        } else if (type == Material.PISTON_STICKY_BASE || type == Material.PISTON_BASE) {
+		        	Util.setPiston(b, toggled);
+		        } else if (Util.isDoor(type)) {
+		        	Door door = (Door) type.getNewData(b.getData());
+		        	if (toggled != door.isOpen()) {
+		        		door.setOpen(toggled);
+			        	Block above = b.getRelative(BlockFace.UP);
+			        	Block below = b.getRelative(BlockFace.DOWN);
+			        	if (Util.isDoor(above.getType())) {
+			        		b.setData(door.getData(), true);
+			        		door.setTopHalf(true);
+			        		above.setData(door.getData(), true);
+			        	} else if (Util.isDoor(below.getType())) {
+			        		door.setTopHalf(false);
+			        		below.setData(door.getData(), true);
+			        		door.setTopHalf(true);
+			        		b.setData(door.getData(), true);
+			        	}
+			        	b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
+		        	}
+		        } else if (type == Material.TRAP_DOOR) {
+		        	TrapDoor td = (TrapDoor) type.getNewData(b.getData());
+		        	if (td.isOpen() != toggled) {
+		        		byte data = (byte) (td.getData() ^ 4);
+		        		b.setData(data);
+		        		b.getWorld().playEffect(b.getLocation(), Effect.DOOR_TOGGLE, 0);
+		        	}
+		        }
+			}
+		}
+    }
+    
     public static boolean isBitSet(byte value, int n) {
     	return (value & (1<<n)) != 0;
     }
@@ -228,7 +220,7 @@ public class Util {
     
     public static void logElements(String prestring, String delimiter, int maxlinelength, Object... elements) {
     	for (String line : listElements(prestring, delimiter, maxlinelength, elements)) {
-    		RedstoneMania.log(Level.INFO, line);
+    		RedstoneMania.plugin.log(Level.INFO, line);
     	}
     }
     public static void listElements(CommandSender player, String prestring, String delimiter, int maxlinelength, Object... elements) {
