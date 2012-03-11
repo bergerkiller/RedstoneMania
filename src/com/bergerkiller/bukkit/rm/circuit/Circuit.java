@@ -3,6 +3,7 @@ package com.bergerkiller.bukkit.rm.circuit;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -197,14 +198,14 @@ public class Circuit extends CircuitBase {
 		return ci;
 	}
 	
-	public void load(DataInputStream dis) throws Exception {
+	public void load(DataInputStream dis) throws IOException {
 		//Read the sub-circuit dependencies
 		this.subcircuits = new CircuitInstance[dis.readShort()];
 		for (int i = 0; i < this.subcircuits.length; i++) {
 			String cname = dis.readUTF();
 			Circuit c = get(cname);
 			if (c == null) {
-				throw new Exception("Circuit dependency not found: " + cname);
+				throw new RuntimeException("Circuit dependency not found: " + cname);
 			} else {
 				this.subcircuits[i] = c.createInstance();
 			}
@@ -221,7 +222,7 @@ public class Circuit extends CircuitBase {
 			for (int i = 0; i < inputcount; i++) {
 				Redstone input = this.getElement(dis.readInt());
 				if (input == null) {
-					throw new Exception("Redstone element has a missing input!");
+					throw new IOException("Redstone element has a missing input!");
 				} else {
 					input.connectTo(r);
 				}
@@ -230,14 +231,14 @@ public class Circuit extends CircuitBase {
 			for (int i = 0; i < outputcount; i++) {
 				Redstone output = this.getElement(dis.readInt());
 				if (output == null) {
-					throw new Exception("Redstone element has a missing output!");
+					throw new IOException("Redstone element has a missing output!");
 				} else {
 					r.connectTo(output);
 				}
 			}
 		}
 	}
-	public void save(DataOutputStream dos) throws Exception {
+	public void save(DataOutputStream dos) throws IOException {
 		//Write circuit dependencies
 		dos.writeShort(this.subcircuits.length);
 		for (CircuitInstance c : this.subcircuits) {

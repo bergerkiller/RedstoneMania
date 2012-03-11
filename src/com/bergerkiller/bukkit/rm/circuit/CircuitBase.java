@@ -3,17 +3,13 @@ package com.bergerkiller.bukkit.rm.circuit;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.logging.Level;
 
-import com.bergerkiller.bukkit.rm.RedstoneMania;
-import com.bergerkiller.bukkit.rm.Util;
+import com.bergerkiller.bukkit.common.config.DataReader;
+import com.bergerkiller.bukkit.common.config.DataWriter;
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
@@ -24,6 +20,8 @@ public class CircuitBase {
 	public CircuitInstance[] subcircuits;
 	private HashMap<String, Port> ports = new HashMap<String, Port>();
 	private boolean initialized = false;
+	private boolean loaded = false;
+	private boolean saved = false;
 
 	public void doPhysics() {
 		for (Redstone r : this.elements) {
@@ -181,26 +179,6 @@ public class CircuitBase {
 		return c;
 	}
 	
-	public void log() {
-		this.log(0);
-	}
-	public void log(int indent) {
-		RedstoneMania.plugin.log(Level.INFO, Util.getIndent(indent) + "Logging circuit: " + this.getFullName());
-		for (Redstone r : this.elements) {
-			if (r.isDisabled()) continue;
-			RedstoneMania.plugin.log(Level.INFO, r.toString()); 
-			if (r.inputs.size() > 0) {
-				Util.logElements(Util.getIndent(indent + 1) + "Receives: ", " | ", 150, r.inputs.toArray(new Object[0]));
-			}
-			if (r.outputs.size() > 0) {
-				Util.logElements(Util.getIndent(indent + 1) + "Powers: ", " | ", 150, r.outputs.toArray(new Object[0]));
-			}
-		}
-		for (CircuitBase cb : this.subcircuits) {
-			cb.log(indent + 1);
-		}
-	}
-	
 	private int generateIds(int startindex) {
 		for (Redstone r : this.elements) {
 			r.setId(startindex);
@@ -231,59 +209,32 @@ public class CircuitBase {
 	}
 	
 	public final boolean load(File file) {
-		DataInputStream dis = null;
-		boolean succ = false;
-		try {
-			dis = new DataInputStream(new FileInputStream(file));
-			try {
-				this.load(dis);
-				succ = true;
-			} catch (IOException ex) {
-				RedstoneMania.plugin.log(Level.SEVERE, "Error while reading data: " + file.getName());
-				ex.printStackTrace();
-			} catch (Exception ex) {
-				RedstoneMania.plugin.log(Level.SEVERE, "Error while loading data: " + file.getName());
-				ex.printStackTrace();
-			}
-			dis.close();
-		} catch (FileNotFoundException ex) {
-			RedstoneMania.plugin.log(Level.WARNING, "Circuit not found: " + file.getName());
-			ex.printStackTrace();
-		} catch (IOException ex) {
-			RedstoneMania.plugin.log(Level.SEVERE, "Failed to load circuit: " + file.getName());
-		}
-		return succ;
+		final CircuitBase me = this;
+		this.loaded = false;
+	    new DataReader(file) {
+	    	public void read(DataInputStream stream) throws IOException {
+	    		me.load(stream);
+	    		me.loaded = true;
+	    	}
+	    }.read();
+		return this.loaded;
 	}
 	public final boolean save(File file) {
-		DataOutputStream dos = null;
-		boolean succ = false;
-		try {
-			dos = new DataOutputStream(new FileOutputStream(file));
-			try {
-				this.save(dos);
-				succ = true;
-			} catch (IOException ex) {
-				RedstoneMania.plugin.log(Level.SEVERE, "Error while writing data: " + file.getName());
-				ex.printStackTrace();
-			} catch (Exception ex) {
-				RedstoneMania.plugin.log(Level.SEVERE, "Error while saving data: " + file.getName());
-				ex.printStackTrace();
+		final CircuitBase me = this;
+		this.saved = false;
+		new DataWriter(file) {
+			public void write(DataOutputStream stream) throws IOException {
+				me.save(stream);
+				me.saved = true;
 			}
-			dos.close();
-		} catch (FileNotFoundException ex) {
-			RedstoneMania.plugin.log(Level.WARNING, "Circuit not accessible: " + file.getName());
-			ex.printStackTrace();
-		} catch (IOException ex) {
-			RedstoneMania.plugin.log(Level.SEVERE, "Failed to save circuit: " + file.getName());
-			ex.printStackTrace();
-		}
-		return succ;
+		}.write();
+		return this.saved;
 	}
 	
-	public void load(DataInputStream stream) throws Exception {
+	public void load(DataInputStream stream) throws IOException {
 		//to be overridden
 	}
-	public void save(DataOutputStream stream) throws Exception {
+	public void save(DataOutputStream stream) throws IOException {
 		//to be overridden
 	}
 

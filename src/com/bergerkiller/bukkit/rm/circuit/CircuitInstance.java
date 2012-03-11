@@ -3,6 +3,7 @@ package com.bergerkiller.bukkit.rm.circuit;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
@@ -44,7 +45,7 @@ public class CircuitInstance extends CircuitBase {
 		return this.source.name + "." + this.name;
 	}
 	
-	public void load(DataInputStream dis) throws Exception {
+	public void load(DataInputStream dis) throws IOException {
 		for (Redstone r : this.elements) {
 			r.loadInstance(dis);
 		}
@@ -53,7 +54,7 @@ public class CircuitInstance extends CircuitBase {
 		}
 		this.initialize();
 	}
-	public void save(DataOutputStream dos) throws Exception {
+	public void save(DataOutputStream dos) throws IOException {
 		for (Redstone r : this.elements) {
 			r.saveInstance(dos);
 		}

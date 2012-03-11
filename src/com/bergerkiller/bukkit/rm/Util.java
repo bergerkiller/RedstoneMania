@@ -1,11 +1,5 @@
 package com.bergerkiller.bukkit.rm;
 
-import java.util.ArrayList;
-import java.util.logging.Level;
-
-import org.bukkit.command.CommandSender;
-
-import org.bukkit.ChatColor;
 import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -212,38 +206,4 @@ public class Util {
     	return (value & (1<<n)) != 0;
     }
     
-    public static String getIndent(int n) {
-    	String rval = "";
-    	for (int i = 0; i < n; i++) rval += "    ";
-    	return rval;
-    }
-    
-    public static void logElements(String prestring, String delimiter, int maxlinelength, Object... elements) {
-    	for (String line : listElements(prestring, delimiter, maxlinelength, elements)) {
-    		RedstoneMania.plugin.log(Level.INFO, line);
-    	}
-    }
-    public static void listElements(CommandSender player, String prestring, String delimiter, int maxlinelength, Object... elements) {
-    	for (String line : listElements(prestring, delimiter, maxlinelength, elements)) {
-    		player.sendMessage(line);
-    	}
-    }
-    public static String[] listElements(String prestring, String delimiter, int maxlinelength, Object... elements) {
-    	ArrayList<String> rval = new ArrayList<String>();
-		String msgpart = prestring;
-		for (Object element : elements) {
-			//display it
-			String name = ChatColor.YELLOW + element.toString();
-			if (msgpart.length() + name.length() < maxlinelength) {
-				if (msgpart.length() != prestring.length()) msgpart += ChatColor.WHITE + delimiter;
-				msgpart += element;
-			} else {
-				rval.add(msgpart);
-				msgpart = name;
-			}
-		}
-		//possibly forgot one?
-		rval.add(msgpart);
-		return rval.toArray(new String[0]);
-    }
 }

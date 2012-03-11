@@ -1,13 +1,13 @@
 package com.bergerkiller.bukkit.rm;
 
 import java.io.File;
-import java.util.ArrayList;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionDefault;
 
+import com.bergerkiller.bukkit.common.MessageBuilder;
 import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.Task;
 import com.bergerkiller.bukkit.common.utils.StringUtil;
@@ -17,10 +17,6 @@ import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 import com.bergerkiller.bukkit.rm.element.Port;
 
 public class RedstoneMania extends PluginBase {
-
-	public RedstoneMania() {
-		super(1896, 2000);
-	}
 
 	public static RedstoneMania plugin;
 			
@@ -138,22 +134,26 @@ public class RedstoneMania extends PluginBase {
 						sender.sendMessage("Please enter a circuit name to delete too!");
 					}
 				} else if (cmdLabel.equals("list")) {
+					MessageBuilder builder = new MessageBuilder();
 					if (args.length == 0) {
-						sender.sendMessage(ChatColor.YELLOW + "Available circuits:");
-						Util.listElements(player, "", " / ", 70, (Object[]) Circuit.getNames());
+						builder.yellow("Available circuits:").newLine();
+						builder.setIndent(2).setSeparator(ChatColor.WHITE, " / ");
+						for (String name : Circuit.getNames()) {
+							builder.yellow(name);
+						}
 					} else {
 						Circuit c = Circuit.get(args[0]);
 						if (c == null) {
-							sender.sendMessage(ChatColor.RED + "Circuit not found!");
+							builder.red("Circuit not found!");
 						} else {
-							ArrayList<String> ports = new ArrayList<String>();
+							builder.yellow("Available ports of ").white("'", c.name, "'").yellow(":").newLine();
+							builder.setIndent(2).setSeparator(ChatColor.WHITE, " / ");
 							for (Port p : c.getPorts()) {
-								ports.add(ChatColor.YELLOW + p.name);
+								builder.yellow(p.name);
 							}
-							sender.sendMessage(ChatColor.YELLOW + "Available ports of '" + c.name + "':");
-							Util.listElements(player, "", " / ", 70, ports.toArray(new Object[0]));
 						}
 					}
+					builder.send(sender);
 				} else if (cmdLabel.equals("reload")) {
 					disable();
 					load();
