@@ -77,11 +77,11 @@ public class SolidComponent extends Redstone {
 	private static boolean isDistractingColumn(Block main, BlockFace face) {
 		Block side = main.getRelative(face);
 		Material type = side.getType();
-		if (Util.canDistractWire(type)) {
+		if (BlockUtil.isPowerSource(type)) {
 			return true;
 		} else if (type == Material.AIR) {
 			//check level below
-			if (Util.canDistractWire(side.getRelative(BlockFace.DOWN).getType())) {
+			if (BlockUtil.isPowerSource(side.getRelative(BlockFace.DOWN).getType())) {
 				return true;
 			}
 		} else if (type == Material.DIODE_BLOCK_ON || type == Material.DIODE_BLOCK_OFF) {
@@ -91,7 +91,7 @@ public class SolidComponent extends Redstone {
 		}
 		if (main.getRelative(BlockFace.UP).getType() == Material.AIR) {
 			//check level on top
-			return Util.canDistractWire(side.getRelative(BlockFace.UP).getType());
+			return BlockUtil.isPowerSource(side.getRelative(BlockFace.UP).getType());
 		} else {
 			return false;
 		}

@@ -17,7 +17,6 @@ import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
 import com.bergerkiller.bukkit.rm.element.Port;
 
 public class RedstoneMania extends PluginBase {
-
 	public static RedstoneMania plugin;
 			
 	private Task updatetask;
@@ -46,7 +45,12 @@ public class RedstoneMania extends PluginBase {
 	public void load() {
 		Circuit.loadAll();
 	}
-	
+
+	@Override
+	public int getMinimumLibVersion() {
+		return 1;
+	}
+
 	public void disable() {
 		Task.stop(this.updatetask);
 		for (Circuit c : Circuit.all()) {
@@ -56,7 +60,7 @@ public class RedstoneMania extends PluginBase {
 		}
 		Circuit.clearAll();
 	}
-		
+
 	@Override
 	public boolean command(CommandSender sender, String cmdLabel, String[] args) {
 		if (sender instanceof Player) {

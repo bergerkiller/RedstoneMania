@@ -71,19 +71,6 @@ public class Util {
     public static boolean isDiode(Material material) {
     	return material == Material.DIODE_BLOCK_OFF || material == Material.DIODE_BLOCK_ON;
     }
-    public static boolean canDistractWire(Material type) {
-		switch (type) {
-		case REDSTONE_WIRE : return true;
-		case REDSTONE_TORCH_ON : return true;
-		case REDSTONE_TORCH_OFF : return true;
-		case LEVER : return true;
-		case WOOD_PLATE : return true;
-		case STONE_PLATE : return true;
-		case STONE_BUTTON : return true;
-		case DETECTOR_RAIL : return true;
-		}
-		return false;
-    }
 
     public static String fixName(String name) {
     	for (int i = 0; i < name.length(); i++) {
