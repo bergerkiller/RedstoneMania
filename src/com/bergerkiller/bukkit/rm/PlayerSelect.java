@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import com.bergerkiller.bukkit.common.BlockLocation;
 import com.bergerkiller.bukkit.common.BlockMap;
 
-
 public class PlayerSelect {
 	private static HashMap<String, PlayerSelect> selections = new HashMap<String, PlayerSelect>();
 	public static PlayerSelect get(Player player) {
@@ -83,5 +82,4 @@ public class PlayerSelect {
 	public boolean isDelayable() {
 		return isTorch() || isRepeater();
 	}
-	
 }

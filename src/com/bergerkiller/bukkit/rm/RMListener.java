@@ -38,7 +38,7 @@ public class RMListener implements Listener {
 				if (b.getType() == Material.LEVER) {
 					PhysicalPort pp = PhysicalPort.get(b);
 					if (pp != null) {
-						boolean down = !Util.isLeverDown(b);
+						boolean down = !BlockUtil.isLeverDown(b);
 						pp.setLeverPowered(down);
 						pp.port.updateLeverPower(pp);
 					}
@@ -90,7 +90,7 @@ public class RMListener implements Listener {
 		if (!event.isCancelled()) {
 			Material type = event.getBlock().getType();
 			if (type == Material.LEVER) {
-				if (!Util.isLeverDown(event.getBlock())) {
+				if (!BlockUtil.isLeverDown(event.getBlock())) {
 					//a disable lever - attached block assigned to a port?
 					PhysicalPort p = PhysicalPort.get(event.getBlock());
 					if (p != null) {

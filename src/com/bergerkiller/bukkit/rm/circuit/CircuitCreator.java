@@ -17,6 +17,7 @@ import com.bergerkiller.bukkit.common.BlockLocation;
 import com.bergerkiller.bukkit.common.BlockMap;
 import com.bergerkiller.bukkit.common.utils.BlockUtil;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
+import com.bergerkiller.bukkit.common.utils.MaterialUtil;
 import com.bergerkiller.bukkit.rm.PlayerSelect;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.RedstoneMap;
@@ -94,9 +95,9 @@ public class CircuitCreator {
 		BlockLocation pos = new BlockLocation(b);
 		if (delays.containsKey(pos)) {
 			return delays.get(pos);
-		} else if (Util.isRedstoneTorch(type)) {
+		} else if (MaterialUtil.ISREDSTONETORCH.get(type)) {
 			return torchdelay;
-		} else if (Util.isDiode(type)) {
+		} else if (MaterialUtil.ISDIODE.get(type)) {
 			return ((Diode) type.getNewData(b.getData())).getDelay() * torchdelay;
 		} else {
 			return 0;
@@ -114,14 +115,14 @@ public class CircuitCreator {
 		Material type = block.getType();
 		IntMap m = map.get(block);
 		if (m.value == null) {
-			if (Util.isRedstoneTorch(type)) {
+			if (MaterialUtil.ISREDSTONETORCH.get(type)) {
 				map.setValue(m, new Inverter());
 				m.value.setPowered(type == Material.REDSTONE_TORCH_OFF);
 				m.value.setDelay(getDelay(block, type));
 				m.value.setPosition(block.getX(), block.getZ());
 				items.add(m.value);
 				createInverter((Inverter) m.value, block, type);
-			} else if (Util.isDiode(type)) {
+			} else if (MaterialUtil.ISDIODE.get(type)) {
 				map.setValue(m, new Repeater());
 				m.value.setPowered(type == Material.DIODE_BLOCK_ON);
 				m.value.setDelay(getDelay(block, type));
@@ -198,7 +199,7 @@ public class CircuitCreator {
 					create(b).value.connect(redstone);
 				}
 				
-			} else if (Util.isRedstoneTorch(btype)) {
+			} else if (MaterialUtil.ISREDSTONETORCH.get(btype)) {
 				create(b).value.connectTo(redstone);
 			}
 		}
@@ -235,7 +236,7 @@ public class CircuitCreator {
 		if (outputtype == Material.REDSTONE_WIRE) {
 			//connect this repeater to wire
 			redstone.connectTo(create(output).value);
-		} else if (Util.isDiode(outputtype)) {
+		} else if (MaterialUtil.ISDIODE.get(outputtype)) {
 			BlockFace oface = BlockUtil.getFacing(output);
 			if (facing == oface) {
 				redstone.connectTo(create(output).value);
@@ -248,7 +249,7 @@ public class CircuitCreator {
 		if (inputtype == Material.REDSTONE_WIRE) {
 			//connect this repeater to wire
 			create(input).value.connectTo(redstone);
-		} else if (Util.isDiode(inputtype)) {
+		} else if (MaterialUtil.ISDIODE.get(inputtype)) {
 			BlockFace oface = BlockUtil.getFacing(input);
 			if (facing == oface) {
 				create(input).value.connectTo(redstone);
@@ -299,10 +300,10 @@ public class CircuitCreator {
 				if (below.getType() == Material.REDSTONE_WIRE) {
 					redstone = connectWire(below, redstone);
 				}
-			} else if (Util.isRedstoneTorch(btype)) {
+			} else if (MaterialUtil.ISREDSTONETORCH.get(btype)) {
 				//this wire receives input from this torch
 				create(b); //we assume that the torch handles direct wire connection
-			} else if (Util.isDiode(btype)) {
+			} else if (MaterialUtil.ISDIODE.get(btype)) {
 				//powering or receiving power
 				BlockFace facing = BlockUtil.getFacing(b);
 				if (facing == face) {
@@ -332,7 +333,7 @@ public class CircuitCreator {
 		create(wire.getRelative(BlockFace.DOWN));
 		//a torch above this wire?
 		Block above = wire.getRelative(BlockFace.UP);
-		if (Util.isRedstoneTorch(above)) create(above);
+		if (MaterialUtil.ISREDSTONETORCH.get(above)) create(above);
 	}
 	
 	private void createSolid(SolidComponent comp, Block block, Material type) {

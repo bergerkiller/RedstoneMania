@@ -11,6 +11,7 @@ import com.bergerkiller.bukkit.common.BlockLocation;
 import com.bergerkiller.bukkit.common.BlockMap;
 import com.bergerkiller.bukkit.common.utils.BlockUtil;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
+import com.bergerkiller.bukkit.common.utils.MaterialUtil;
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.Util;
 import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
@@ -19,7 +20,7 @@ public class PhysicalPort {
 	private static BlockMap<PhysicalPort> ports = new BlockMap<PhysicalPort>();
 	private static BlockLocation getPostion(Block at) {
 		Material type = at.getType();
-		if (type == Material.LEVER || type == Material.SIGN_POST || type == Material.WALL_SIGN) {
+		if (type == Material.LEVER || MaterialUtil.ISSIGN.get(type)) {
 			at = BlockUtil.getAttachedBlock(at);
 		}
 		return new BlockLocation(at);

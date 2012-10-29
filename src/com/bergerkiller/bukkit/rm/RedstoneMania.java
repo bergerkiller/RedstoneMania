@@ -10,6 +10,7 @@ import org.bukkit.permissions.PermissionDefault;
 import com.bergerkiller.bukkit.common.MessageBuilder;
 import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.Task;
+import com.bergerkiller.bukkit.common.permissions.NoPermissionException;
 import com.bergerkiller.bukkit.common.utils.StringUtil;
 import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitCreator;
@@ -18,7 +19,7 @@ import com.bergerkiller.bukkit.rm.element.Port;
 
 public class RedstoneMania extends PluginBase {
 	public static RedstoneMania plugin;
-			
+
 	private Task updatetask;
 	public void enable() {
 		plugin = this;
@@ -41,7 +42,7 @@ public class RedstoneMania extends PluginBase {
 			}
 		}.start(1, 1);
 	}
-	
+
 	public void load() {
 		Circuit.loadAll();
 	}
@@ -66,8 +67,7 @@ public class RedstoneMania extends PluginBase {
 		if (sender instanceof Player) {
 			Player player = (Player) sender;
 			if (!player.hasPermission("redstonemania.use")) {
-				
-				return false;
+				throw new NoPermissionException();
 			}
 			PlayerSelect sel = PlayerSelect.get(player);
 			if (args.length > 0) {
@@ -184,6 +184,8 @@ public class RedstoneMania extends PluginBase {
 					} else {
 						sender.sendMessage("Please enter a circuit name too!");
 					}
+				} else {
+					sender.sendMessage("Unknown sub command '" + cmdLabel + "'!");
 				}
 			} else {
 				sender.sendMessage("Invalid arg count");
@@ -198,6 +200,4 @@ public class RedstoneMania extends PluginBase {
 	public void permissions() {
 		this.loadPermission("redstonemania.use", PermissionDefault.OP, "If the player can use redstone mania's commands and ports");
 	}
-	
-	
 }
