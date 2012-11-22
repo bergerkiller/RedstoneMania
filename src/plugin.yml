@@ -1,6 +1,6 @@
 name: Redstone Mania
 main: com.bergerkiller.bukkit.rm.RedstoneMania
-version: 1.01
+version: 1.02
 author: bergerkiller
 depend: [BKCommonLib]
 description: Plugin to virtualize redstone

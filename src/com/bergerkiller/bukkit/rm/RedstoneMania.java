@@ -11,6 +11,7 @@ import com.bergerkiller.bukkit.common.MessageBuilder;
 import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.Task;
 import com.bergerkiller.bukkit.common.permissions.NoPermissionException;
+import com.bergerkiller.bukkit.common.utils.ParseUtil;
 import com.bergerkiller.bukkit.common.utils.StringUtil;
 import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitCreator;
@@ -120,22 +121,55 @@ public class RedstoneMania extends PluginBase {
 								delay = Integer.parseInt(args[0]);
 							} catch (Exception ex) {}
 							sel.setDelay(delay);
-							sender.sendMessage("This element now has a delay of " + delay + " ticks!");
+							sender.sendMessage(ChatColor.YELLOW + "This element now has a delay of " + delay + " ticks!");
 						} else {
-							sender.sendMessage("Please enter a delay for this element too!");
+							sender.sendMessage(ChatColor.RED + "Please enter a delay for this element too!");
 						}
 					} else {
-						sender.sendMessage("Please select a wire to set a port to first!");
+						sender.sendMessage(ChatColor.RED + "Please select a wire to set a port to first!");
+					}
+				} else if (cmdLabel.equals("toggle")) {
+					if (args.length >= 3) {
+						String circuitName = args[0];
+						String instanceName = args[1];
+						String portName = args[2];
+						// Try to find the circuit and instance
+						Circuit c = Circuit.get(circuitName);
+						if (c != null) {
+							CircuitInstance ci = c.getInstance(instanceName);
+							if (ci != null) {
+								// Obtain the given port
+								Port port = ci.getPort(portName);
+								if (port != null) {
+									// Toggle this port, or set to state specified
+									final boolean newState = args.length >= 4 ? ParseUtil.parseBool(args[3]) : !port.isPowered();
+									if (newState != port.isLeverPowered()) {
+										port.setLeverPowered(newState);
+										port.onPowerChange();
+									}
+									sender.sendMessage(ChatColor.GREEN + "Port has been toggled to the power '" + (newState ? "on" : "off") + "' state!");
+								} else {
+									sender.sendMessage(ChatColor.RED + "Port '" + portName + "' does not exist in circuit '" + circuitName + "'!");
+								}
+							} else {
+								sender.sendMessage(ChatColor.RED + "Circuit instance '" + instanceName + "' was not found in circuit '" + circuitName + "'!");
+							}
+						} else {
+							sender.sendMessage(ChatColor.RED + "Circuit '" + circuitName + "' was not found!");
+						}
+					} else {
+						sender.sendMessage(ChatColor.RED + "Invalid amount of arguments for the toggle sub-command");
+						sender.sendMessage(ChatColor.WHITE + "/redstone toggle [circuitname] [instancename] [port] ([state])");
 					}
 				} else if (cmdLabel.equals("delete")) {
 					if (args.length > 0) {
 						if (Circuit.delete(args[0])) {
-							sender.sendMessage("Circuit has been deleted!");
+							sender.sendMessage(ChatColor.YELLOW + "Circuit has been deleted!");
 						} else {
-							sender.sendMessage("Circuit not found!");
+							sender.sendMessage(ChatColor.RED + "Circuit not found!");
 						}
 					} else {
-						sender.sendMessage("Please enter a circuit name to delete too!");
+						sender.sendMessage(ChatColor.RED + "Please enter a circuit name to delete too!");
 					}
 				} else if (cmdLabel.equals("list")) {
 					MessageBuilder builder = new MessageBuilder();

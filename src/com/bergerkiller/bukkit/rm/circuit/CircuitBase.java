@@ -14,7 +14,6 @@ import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
 public class CircuitBase {
-		
 	public String name;
 	public Redstone[] elements;
 	public CircuitInstance[] subcircuits;
@@ -209,23 +208,21 @@ public class CircuitBase {
 	}
 	
 	public final boolean load(File file) {
-		final CircuitBase me = this;
 		this.loaded = false;
 	    new DataReader(file) {
 	    	public void read(DataInputStream stream) throws IOException {
-	    		me.load(stream);
-	    		me.loaded = true;
+	    		CircuitBase.this.load(stream);
+	    		CircuitBase.this.loaded = true;
 	    	}
 	    }.read();
 		return this.loaded;
 	}
 	public final boolean save(File file) {
-		final CircuitBase me = this;
 		this.saved = false;
 		new DataWriter(file) {
 			public void write(DataOutputStream stream) throws IOException {
-				me.save(stream);
-				me.saved = true;
+				CircuitBase.this.save(stream);
+				CircuitBase.this.saved = true;
 			}
 		}.write();
 		return this.saved;

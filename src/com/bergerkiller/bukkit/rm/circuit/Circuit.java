@@ -17,15 +17,59 @@ public class Circuit extends CircuitBase {
 	private static HashMap<String, Circuit> circuits = new HashMap<String, Circuit>();
 	public static Circuit get(String name) {
 		Circuit c = circuits.get(name);
-		if (c == null) {
-			//possible to load?
-			File source = getCircuitFile(name);
-			if (source.exists()) {
-				c = load(name);
-				add(c);
+		if (c != null) {
+			return c;
+		}
+
+		//possible to load?
+		File source = getCircuitFile(name);
+		if (source.exists()) {
+			c = load(name);
+			if (c != null) {
+				try {
+					// Load circuit instances if available
+					File instanceFolder = c.getInstanceFolder();
+					for (String instanceName : instanceFolder.list()) {
+						if (instanceName.toLowerCase().endsWith(".instance")) {
+							instanceName = instanceName.substring(0, instanceName.length() - 9);
+							CircuitInstance ci = c.createInstance(instanceName);
+							if (ci != null && ci.load()) {
+								ci.update();
+								ci.updateAlive();
+							} else {
+								// Delete this instance
+								File instanceFile = new File(instanceFolder, instanceName);
+								instanceFile.delete();
+							}
+						}
+					}
+					// Add the circuit
+					add(c);
+					return c;
+				} catch (Throwable t) {
+					RedstoneMania.plugin.log(Level.SEVERE, "An error occurred while loading the instances of circuit '" + name + "':");
+					t.printStackTrace();
+				}
 			}
 		}
-		return c;
+
+		// Do instances of this circuit name exist?
+		// If so, delete these instances
+		File instanceFolder = getInstancesFolder(name);
+		if (instanceFolder.exists()) {
+			RedstoneMania.plugin.log(Level.WARNING, "Circuit instances of '" + name + "' will be deleted, because the circuit no longer exists!");
+			// Delete instance files
+			try {
+				for (File instanceFile : instanceFolder.listFiles()) {
+					instanceFile.delete();
+				}
+				instanceFolder.delete();
+			} catch (SecurityException ex) {
+				RedstoneMania.plugin.log(Level.WARNING, "Could not completely remove broken circuit instances of circuit '" + name + "':");
+				ex.printStackTrace();
+			}
+		}
+		return null;
 	}
 	public static void add(Circuit circuit) {
 		if (circuit != null) {
@@ -73,22 +117,8 @@ public class Circuit extends CircuitBase {
 		return names;
 	}
 	public static void loadAll() {
-		for (File circuitfile : getInstancesFolder().listFiles()) {
-			String circuitname = circuitfile.getName();
-			Circuit c = get(circuitname);
-			if (c == null) {
-				RedstoneMania.plugin.log(Level.WARNING, "Circuit instances of '" + circuitname + "' are not loaded, because the circuit doesn't exist!");
-			} else {
-				for (String name : c.getInstanceFolder().list()) {
-					if (name.toLowerCase().endsWith(".instance")) {
-						name = name.substring(0, name.length() - 9);
-						CircuitInstance ci = c.createInstance(name);
-						ci.load();
-						ci.update();
-						ci.updateAlive();
-					}
-				}
-			}
+		for (String circuitname : getInstancesFolder().list()) {
+			get(circuitname);
 		}
 	}
 	public static void clearAll() {
@@ -97,19 +127,22 @@ public class Circuit extends CircuitBase {
 	}
 	
 	public static File getCircuitsFolder() {
-		File file = new File(RedstoneMania.plugin.getDataFolder() + File.separator + "circuits");
+		File file = new File(RedstoneMania.plugin.getDataFolder(), "circuits");
 		file.mkdirs();
 		return file;
 	}
 	public static File getInstancesFolder() {
-		File file = new File(RedstoneMania.plugin.getDataFolder() + File.separator + "instances");
+		File file = new File(RedstoneMania.plugin.getDataFolder(), "instances");
 		file.mkdirs();
 		return file;
 	}
-	public static File getCircuitFile(String name) {
-		return new File(getCircuitsFolder() + File.separator + name + ".circuit");
+	public static File getInstancesFolder(String circuitName) {
+		return new File(getInstancesFolder(), circuitName);
 	}
-		
+	public static File getCircuitFile(String name) {
+		return new File(getCircuitsFolder(), name + ".circuit");
+	}
+
 	public File getFile() {
 		return getCircuitFile(this.name);
 	}
