@@ -6,23 +6,14 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.bukkit.block.Block;
+
 import com.bergerkiller.bukkit.rm.RedstoneMania;
 import com.bergerkiller.bukkit.rm.circuit.CircuitBase;
 
 public class Redstone {
-	
 	private int setdelay = 0;
-	private boolean setpowered = false;
-
-	public void updateTick() {
-		if (setdelay > 0) {
-			if (--setdelay == 0) {
-				this.setPowered(this.setpowered, false);
-			}
-		}
-		this.burnoutCounter = burnoutValue;
-	}
-	
+	private boolean setpowered = false;	
 	private boolean powered = false;
 	private boolean inputpower = false;
 	private int id = -1;
@@ -33,7 +24,20 @@ public class Redstone {
 	private final int burnoutValue = 5; //Sets the maximum allowed updates/tick
 	private int burnoutCounter = burnoutValue;
 	private short x, z;
-	
+
+	public void onTick() {
+		if (setdelay > 0) {
+			if (--setdelay == 0) {
+				this.setPowered(this.setpowered, false);
+			}
+		}
+		this.burnoutCounter = burnoutValue;
+	}
+
+	public void setPosition(Block block) {
+		this.setPosition(block.getX(), block.getZ());
+	}
+
 	public void setPosition(int x, int z) {
 		this.x = (short) x;
 		this.z = (short) z;

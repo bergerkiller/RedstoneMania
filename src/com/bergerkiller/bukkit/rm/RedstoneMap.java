@@ -6,70 +6,50 @@ import java.util.HashSet;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 
-import com.bergerkiller.bukkit.rm.element.Port;
+import com.bergerkiller.bukkit.common.BlockLocation;
+import com.bergerkiller.bukkit.common.BlockMap;
 import com.bergerkiller.bukkit.rm.element.Redstone;
-import com.bergerkiller.bukkit.rm.element.SolidComponent;
 
+/**
+ * Maps Redstone instances to blocks in (possibly) multiple worlds
+ */
 public class RedstoneMap {
-	
-	public IntMap get(Block block) {
-		return get(block.getWorld(), block.getX(), block.getY(), block.getZ());
+	private BlockMap<RedstoneContainer> blocks = new BlockMap<RedstoneContainer>();
+	private HashMap<Redstone, HashSet<RedstoneContainer>> maps = new HashMap<Redstone, HashSet<RedstoneContainer>>();
+
+	public RedstoneContainer get(Block block) {
+		return get(new BlockLocation(block));
 	}
-	public IntMap get(World world, int x, int y, int z) {
-		return get(world).get(x).get(y).get(z);
+	public RedstoneContainer get(World world, int x, int y, int z) {
+		return get(new BlockLocation(world, x, y, z));
 	}
-	
-	private IntMap get(World world) {
-		IntMap m = worlds.get(world);
+	public RedstoneContainer get(BlockLocation block) {
+		RedstoneContainer m = blocks.get(block);
 		if (m == null) {
-			m = new IntMap();
-			worlds.put(world, m);
+			m = new RedstoneContainer(this);
+			blocks.put(block, m);
 		}
 		return m;
 	}
-	
-	private HashMap<World, IntMap> worlds = new HashMap<World, IntMap>();
-	private HashMap<Redstone, HashSet<IntMap>> maps = new HashMap<Redstone, HashSet<IntMap>>();
-	public HashSet<IntMap> getMaps(Redstone redstone) {
-		HashSet<IntMap> map = maps.get(redstone);
+
+	public HashSet<RedstoneContainer> getMaps(Redstone redstone) {
+		HashSet<RedstoneContainer> map = maps.get(redstone);
 		if (map == null) {
-			map = new HashSet<IntMap>();
+			map = new HashSet<RedstoneContainer>();
 			maps.put(redstone, map);
 		}
 		return map;
 	}
+
 	public void merge(Redstone from, Redstone to) {
-		HashSet<IntMap> rmaps = getMaps(from);
-		for (IntMap map : rmaps) {
+		HashSet<RedstoneContainer> rmaps = getMaps(from);
+		for (RedstoneContainer map : rmaps) {
 			setValue(map, to);
 		}
 		maps.remove(from);
 	}
-	
-	
-	public void setValue(IntMap map, Redstone value) {
-		map.value = value;
+
+	protected void setValue(RedstoneContainer map, Redstone value) {
 		getMaps(value).add(map);
 	}
-	
-	public class IntMap {
-		public Redstone value;
-		public Port port() {
-			return (Port) value;
-		}
-		public SolidComponent comp() {
-			return (SolidComponent) value;
-		}
-		private HashMap<Integer, IntMap> coords = new HashMap<Integer, IntMap>();
-		public IntMap get(int value) {
-			IntMap m = coords.get(value);
-			if (m == null) {
-				m = new IntMap();
-				coords.put(value, m);
-			}
-			return m;
-		}
-		
-	}
-
 }

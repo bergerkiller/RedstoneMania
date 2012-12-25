@@ -20,6 +20,7 @@ import org.bukkit.event.world.WorldUnloadEvent;
 import com.bergerkiller.bukkit.common.utils.BlockUtil;
 import com.bergerkiller.bukkit.rm.circuit.Circuit;
 import com.bergerkiller.bukkit.rm.circuit.CircuitInstance;
+import com.bergerkiller.bukkit.rm.circuit.CircuitProvider;
 import com.bergerkiller.bukkit.rm.element.PhysicalPort;
 import com.bergerkiller.bukkit.rm.element.Port;
 
@@ -51,7 +52,7 @@ public class RMListener implements Listener {
 	public void onChunkLoad(ChunkLoadEvent event) {
 		for (PhysicalPort p : PhysicalPort.getAll()) {
 			if (p.position.isIn(event.getChunk())) {
-				p.setActive(true);
+				p.setLoaded(true);
 			}
 		}
 	}
@@ -61,7 +62,7 @@ public class RMListener implements Listener {
 		if (event.isCancelled()) return;
 		for (PhysicalPort p : PhysicalPort.getAll()) {
 			if (p.position.isIn(event.getChunk())) {
-				p.setActive(false);
+				p.setLoaded(false);
 			}
 		}
 	}
@@ -70,7 +71,7 @@ public class RMListener implements Listener {
 	public void onWorldLoad(WorldLoadEvent event) {
 		for (PhysicalPort p : PhysicalPort.getAll()) {
 			if (p.position.world.equals(event.getWorld().getName())) {
-				p.updateActive();
+				p.updateLoaded();
 			}
 		}
 	}
@@ -80,7 +81,7 @@ public class RMListener implements Listener {
 		if (event.isCancelled()) return;
 		for (PhysicalPort p : PhysicalPort.getAll()) {
 			if (p.position.world.equals(event.getWorld().getName())) {
-				p.setActive(false);
+				p.setLoaded(false);
 			}
 		}
 	}
@@ -94,7 +95,7 @@ public class RMListener implements Listener {
 					//a disable lever - attached block assigned to a port?
 					PhysicalPort p = PhysicalPort.get(event.getBlock());
 					if (p != null) {
-						p.updateLeverPower();
+						p.updateLeverPowered();
 					}
 				}
 			}
@@ -105,7 +106,7 @@ public class RMListener implements Listener {
 	public void onBlockPlace(BlockPlaceEvent event) {
 		if (!event.isCancelled()) {
 			if (event.getBlock().getType() == Material.LEVER) {
-				PhysicalPort.updateLevers(event.getBlock(), true);
+				PhysicalPort.updateLevers(event.getBlock());
 			}
 		}
 	}
@@ -124,13 +125,13 @@ public class RMListener implements Listener {
 			}
 		}
 	}
-	
+
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onSignChange(SignChangeEvent event) {
 		if (event.isCancelled()) return;
 		if (event.getLine(0).equalsIgnoreCase("[port]")) {
 			String circuitname = event.getLine(1);
-			Circuit c = Circuit.get(circuitname);
+			Circuit c = CircuitProvider.get(circuitname);
 			if (c != null) {
 				event.setLine(2, Util.fixName(event.getLine(2)));
 				String instance = event.getLine(2);

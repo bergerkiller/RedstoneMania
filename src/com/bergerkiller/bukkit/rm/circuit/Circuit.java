@@ -14,145 +14,19 @@ import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
 public class Circuit extends CircuitBase {
-	private static HashMap<String, Circuit> circuits = new HashMap<String, Circuit>();
-	public static Circuit get(String name) {
-		Circuit c = circuits.get(name);
-		if (c != null) {
-			return c;
-		}
-
-		//possible to load?
-		File source = getCircuitFile(name);
-		if (source.exists()) {
-			c = load(name);
-			if (c != null) {
-				try {
-					// Load circuit instances if available
-					File instanceFolder = c.getInstanceFolder();
-					for (String instanceName : instanceFolder.list()) {
-						if (instanceName.toLowerCase().endsWith(".instance")) {
-							instanceName = instanceName.substring(0, instanceName.length() - 9);
-							CircuitInstance ci = c.createInstance(instanceName);
-							if (ci != null && ci.load()) {
-								ci.update();
-								ci.updateAlive();
-							} else {
-								// Delete this instance
-								File instanceFile = new File(instanceFolder, instanceName);
-								instanceFile.delete();
-							}
-						}
-					}
-					// Add the circuit
-					add(c);
-					return c;
-				} catch (Throwable t) {
-					RedstoneMania.plugin.log(Level.SEVERE, "An error occurred while loading the instances of circuit '" + name + "':");
-					t.printStackTrace();
-				}
-			}
-		}
-
-		// Do instances of this circuit name exist?
-		// If so, delete these instances
-		File instanceFolder = getInstancesFolder(name);
-		if (instanceFolder.exists()) {
-			RedstoneMania.plugin.log(Level.WARNING, "Circuit instances of '" + name + "' will be deleted, because the circuit no longer exists!");
-			// Delete instance files
-			try {
-				for (File instanceFile : instanceFolder.listFiles()) {
-					instanceFile.delete();
-				}
-				instanceFolder.delete();
-			} catch (SecurityException ex) {
-				RedstoneMania.plugin.log(Level.WARNING, "Could not completely remove broken circuit instances of circuit '" + name + "':");
-				ex.printStackTrace();
-			}
-		}
-		return null;
-	}
-	public static void add(Circuit circuit) {
-		if (circuit != null) {
-			if (!circuit.isSaved()) circuit.save();
-			circuits.put(circuit.name, circuit);
-		}
-	}
-	public static void add(Circuit circuit, String name) {
-		if (circuit != null) {
-			circuit.name = name;
-			add(circuit);
-		}
-	}
-	public static Collection<Circuit> all() {
-		return circuits.values();
-	}
-	public static boolean unload(String name) {
-		Circuit c = circuits.remove(name);
-		if (c != null) {
-			
-			return true;
-		} else {
-			return false;
-		}
-	}
-	public static boolean delete(String name) {
-		unload(name);
-		File file = getCircuitFile(name);
-		if (file.exists()) return file.delete();
-		return false;
-	}
-	public static Circuit load(String name) {
-		Circuit c = new Circuit();
-		c.name = name;
-		if (c.load()) return c;
-		return null;
-	}
-	public static String[] getNames() {
-		String[] names = getCircuitsFolder().list();
-		for (int i = 0; i < names.length; i++) {
-			if (names[i].toLowerCase().endsWith(".circuit")) {
-				names[i] = names[i].substring(0, names[i].length() - 8);
-			}
-		}
-		return names;
-	}
-	public static void loadAll() {
-		for (String circuitname : getInstancesFolder().list()) {
-			get(circuitname);
-		}
-	}
-	public static void clearAll() {
-		circuits.clear();
-		PhysicalPort.clearAll();
-	}
-	
-	public static File getCircuitsFolder() {
-		File file = new File(RedstoneMania.plugin.getDataFolder(), "circuits");
-		file.mkdirs();
-		return file;
-	}
-	public static File getInstancesFolder() {
-		File file = new File(RedstoneMania.plugin.getDataFolder(), "instances");
-		file.mkdirs();
-		return file;
-	}
-	public static File getInstancesFolder(String circuitName) {
-		return new File(getInstancesFolder(), circuitName);
-	}
-	public static File getCircuitFile(String name) {
-		return new File(getCircuitsFolder(), name + ".circuit");
-	}
-
-	public File getFile() {
-		return getCircuitFile(this.name);
-	}
-	public File getInstanceFolder() {
-		File file = new File(getInstancesFolder() + File.separator + this.name);
-		file.mkdirs();
-		return file;
-	}
-	
 	private HashMap<String, CircuitInstance> instances = new HashMap<String, CircuitInstance>();
+
+	@Override
+	public File getFile() {
+		return CircuitProvider.getCircuitFile(this.name);
+	}
+
+	public File getInstanceFolder() {
+		File file = new File(CircuitProvider.getInstancesFolder() + File.separator + this.name);
+		file.mkdirs();
+		return file;
+	}
+
 	public CircuitInstance getInstance(String name) {
 		return this.instances.get(name);
 	}
@@ -230,13 +104,14 @@ public class Circuit extends CircuitBase {
 		if (sourcefile.exists()) sourcefile.delete();
 		return ci;
 	}
-	
+
+	@Override
 	public void load(DataInputStream dis) throws IOException {
 		//Read the sub-circuit dependencies
 		this.subcircuits = new CircuitInstance[dis.readShort()];
 		for (int i = 0; i < this.subcircuits.length; i++) {
 			String cname = dis.readUTF();
-			Circuit c = get(cname);
+			Circuit c = CircuitProvider.get(cname);
 			if (c == null) {
 				throw new RuntimeException("Circuit dependency not found: " + cname);
 			} else {
@@ -271,6 +146,8 @@ public class Circuit extends CircuitBase {
 			}
 		}
 	}
+
+	@Override
 	public void save(DataOutputStream dos) throws IOException {
 		//Write circuit dependencies
 		dos.writeShort(this.subcircuits.length);
@@ -294,7 +171,7 @@ public class Circuit extends CircuitBase {
 			}
 		}
 	}
-	
+
 	public String getNewInstanceName() {
 		int index = this.instances.size();
 		String name = String.valueOf(index);
@@ -304,5 +181,4 @@ public class Circuit extends CircuitBase {
 		}
 		return name;
 	}
-	
 }

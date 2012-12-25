@@ -41,7 +41,7 @@ public class SolidComponent extends Redstone {
 			outputs.add(below);
 		}
 		//Check all sides and up for torches
-		for (BlockFace face : FaceUtil.attachedFaces) {
+		for (BlockFace face : FaceUtil.ATTACHEDFACES) {
 			Block b = block.getRelative(face);
 			Material type = b.getType();
 			if (MaterialUtil.ISREDSTONETORCH.get(type)) {

@@ -9,15 +9,14 @@ import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
 public class CircuitInstance extends CircuitBase {
-	
 	public Circuit source;
 	public boolean isMain = false;
-	
+
 	public CircuitInstance(Circuit source, String name) {
 		this.source = source;
 		this.name = name;
 	}
-	
+
 	public boolean updateAlive() {
 		for (Port p : this.getPorts()) {
 			if (p.locations.size() > 0) {
@@ -28,6 +27,7 @@ public class CircuitInstance extends CircuitBase {
 		this.source.removeInstance(this.name);
 		return true;
 	}
+
 	public void update() {
 		for (Redstone r : this.elements) {
 			r.update();
@@ -37,14 +37,18 @@ public class CircuitInstance extends CircuitBase {
 			ci.update();
 		}
 	}
-	
+
+	@Override
 	public File getFile() {
 		return new File(this.source.getInstanceFolder() + File.separator + this.name + ".instance");
 	}
+
+	@Override
 	public String getFullName() {
 		return this.source.name + "." + this.name;
 	}
-	
+
+	@Override
 	public void load(DataInputStream dis) throws IOException {
 		for (Redstone r : this.elements) {
 			r.loadInstance(dis);
@@ -54,6 +58,8 @@ public class CircuitInstance extends CircuitBase {
 		}
 		this.initialize();
 	}
+
+	@Override
 	public void save(DataOutputStream dos) throws IOException {
 		for (Redstone r : this.elements) {
 			r.saveInstance(dos);
@@ -62,5 +68,4 @@ public class CircuitInstance extends CircuitBase {
 			c.save(dos);
 		}
 	}
-	
 }

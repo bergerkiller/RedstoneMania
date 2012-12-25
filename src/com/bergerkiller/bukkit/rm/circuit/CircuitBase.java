@@ -13,7 +13,7 @@ import com.bergerkiller.bukkit.common.config.DataWriter;
 import com.bergerkiller.bukkit.rm.element.Port;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
-public class CircuitBase {
+public abstract class CircuitBase {
 	public String name;
 	public Redstone[] elements;
 	public CircuitInstance[] subcircuits;
@@ -22,15 +22,18 @@ public class CircuitBase {
 	private boolean loaded = false;
 	private boolean saved = false;
 
-	public void doPhysics() {
+	/**
+	 * Ticks all the elements in this Circuit
+	 */
+	public void onTick() {
 		for (Redstone r : this.elements) {
-			r.updateTick();
+			r.onTick();
 		}
 		for (CircuitInstance ci : this.subcircuits) {
-			ci.doPhysics();
+			ci.onTick();
 		}
 	}
-	
+
 	public void initialize() {
 		this.initialize(true);
 	}
@@ -206,7 +209,7 @@ public class CircuitBase {
 	public final boolean save() {
 		return this.save(this.getFile());
 	}
-	
+
 	public final boolean load(File file) {
 		this.loaded = false;
 	    new DataReader(file) {
@@ -217,6 +220,7 @@ public class CircuitBase {
 	    }.read();
 		return this.loaded;
 	}
+
 	public final boolean save(File file) {
 		this.saved = false;
 		new DataWriter(file) {
@@ -227,12 +231,20 @@ public class CircuitBase {
 		}.write();
 		return this.saved;
 	}
-	
-	public void load(DataInputStream stream) throws IOException {
-		//to be overridden
-	}
-	public void save(DataOutputStream stream) throws IOException {
-		//to be overridden
-	}
 
+	/**
+	 * Loads this Circuit using the stream specified
+	 * 
+	 * @param stream to read from
+	 * @throws IOException
+	 */
+	public abstract void load(DataInputStream stream) throws IOException;
+
+	/**
+	 * Saves this Circuit to the stream specified
+	 * 
+	 * @param stream to write to
+	 * @throws IOException
+	 */
+	public abstract void save(DataOutputStream stream) throws IOException;
 }

@@ -63,7 +63,7 @@ public class Port extends Redstone {
 			this.onPowerChange();
 		} else {
 			for (PhysicalPort p : locations) {
-				if (p != ignore) p.setLevers();
+				if (p != ignore) p.updateLevers();
 			}
 			super.onPowerChange();
 		}
@@ -73,7 +73,7 @@ public class Port extends Redstone {
 		if (!this.ignoreNext) {
 			this.ignoreNext = true;
 			for (PhysicalPort p : locations) {
-				p.setLevers();
+				p.updateLevers();
 			}
 		}
 		super.onPowerChange();
