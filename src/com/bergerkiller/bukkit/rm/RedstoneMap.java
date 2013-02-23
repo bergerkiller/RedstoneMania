@@ -7,7 +7,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 
 import com.bergerkiller.bukkit.common.BlockLocation;
-import com.bergerkiller.bukkit.common.BlockMap;
+import com.bergerkiller.bukkit.common.collections.BlockMap;
 import com.bergerkiller.bukkit.rm.element.Redstone;
 
 /**
