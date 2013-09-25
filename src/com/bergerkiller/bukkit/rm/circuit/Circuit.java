@@ -30,9 +30,11 @@ public class Circuit extends CircuitBase {
 	public CircuitInstance getInstance(String name) {
 		return this.instances.get(name);
 	}
+
 	public Collection<CircuitInstance> getInstances() {
 		return this.instances.values();
 	}
+
 	private CircuitInstance createInstance(boolean main) {
 		CircuitInstance c = new CircuitInstance(this, "");
 		//Set dependencies
@@ -78,6 +80,19 @@ public class Circuit extends CircuitBase {
 		//Fix direct connections
 		c.fixDirectConnections();
 		return c;
+	}
+	public String findNewInstanceName() {
+		StringBuilder nameBuilder = new StringBuilder(2);
+		String newName = "";
+		for (int i = 0; i < Integer.MAX_VALUE; i++) {
+			nameBuilder.setLength(0);
+			nameBuilder.append(i);
+			newName = nameBuilder.toString();
+			if (!this.instances.containsKey(newName)) {
+				break;
+			}
+		}
+		return newName;
 	}
 	public CircuitInstance createInstance() {
 		return this.createInstance(false);

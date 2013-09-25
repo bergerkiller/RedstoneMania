@@ -134,6 +134,9 @@ public class RMListener implements Listener {
 			Circuit c = CircuitProvider.get(circuitname);
 			if (c != null) {
 				event.setLine(2, Util.fixName(event.getLine(2)));
+				if (event.getLine(2).length() == 0) {
+					event.setLine(2, c.findNewInstanceName());
+				}
 				String instance = event.getLine(2);
 				CircuitInstance cc = c.getInstance(instance);
 				if (cc == null) {
@@ -145,6 +148,7 @@ public class RMListener implements Listener {
 						cc.initialize();
 						cc.update();
 						event.getPlayer().sendMessage(ChatColor.GREEN + "A new instance of '" + circuitname + "' has been made!");
+						event.getPlayer().sendMessage(ChatColor.GREEN + "You can add more ports to this instance by re-using the name on the third line of this sign");
 					}
 				}
 				Block a = BlockUtil.getAttachedBlock(event.getBlock());
